@@ -1,4 +1,4 @@
-import { runWidget } from "./index.ts";
+import { runWidget } from "./widget.ts";
 import { launch } from "./launch.ts";
 import { doctor } from "./doctor.ts";
 import { statusline, installStatusline } from "./statusline.ts";

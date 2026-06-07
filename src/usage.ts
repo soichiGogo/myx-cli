@@ -24,7 +24,12 @@ const EMPTY: UsageSnapshot = {
  * window continues: `currentPct / fractionOfWindowElapsed`. Returns null when too
  * early in the window to be meaningful. May exceed 100 (on pace to hit the cap).
  */
-function project(pct: number | null, resetAt: number | null, windowSec: number, nowMs: number): number | null {
+export function project(
+  pct: number | null,
+  resetAt: number | null,
+  windowSec: number,
+  nowMs: number,
+): number | null {
   if (pct == null || resetAt == null) return null;
   const windowStart = resetAt - windowSec; // epoch seconds
   const frac = (nowMs / 1000 - windowStart) / windowSec;

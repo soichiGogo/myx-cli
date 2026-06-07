@@ -1,9 +1,8 @@
 import type { UsageSnapshot } from "./types.ts";
-
-const ESC = "\x1b";
+import { color, dim } from "./ansi.ts";
 
 /** Approximate visible width in terminal cells (emoji counted as 2). */
-function vis(s: string): number {
+export function vis(s: string): number {
   let n = 0;
   for (const ch of s) {
     const cp = ch.codePointAt(0)!;
@@ -12,13 +11,14 @@ function vis(s: string): number {
   return n;
 }
 
-function bar(pct: number, width: number): string {
+/** A proportional bar of `width` cells; `pct` is a fraction in 0..1. */
+export function bar(pct: number, width: number): string {
   const filled = Math.max(0, Math.min(width, Math.round(pct * width)));
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
 
 /** Compact duration: 23m, 4h, 3h18m, 5d3h. */
-function dur(minutes: number): string {
+export function dur(minutes: number): string {
   const m = Math.max(0, Math.round(minutes));
   if (m < 60) return `${m}m`;
   if (m < 1440) {
@@ -31,13 +31,9 @@ function dur(minutes: number): string {
   return h ? `${d}d${h}h` : `${d}d`;
 }
 
+/** Color a string by usage percentage: green <50, yellow <80, red ≥80. */
 function colorByPct(s: string, pct: number): string {
-  const code = pct < 50 ? 32 : pct < 80 ? 33 : 31; // green / yellow / red
-  return `${ESC}[${code}m${s}${ESC}[0m`;
-}
-
-function dim(s: string): string {
-  return `${ESC}[2m${s}${ESC}[0m`;
+  return color(s, pct < 50 ? "green" : pct < 80 ? "yellow" : "red");
 }
 
 function minutesUntil(epochSeconds: number | null, nowMs: number): number | null {
@@ -51,7 +47,13 @@ function resetTail(resetAt: number | null, nowMs: number): string {
 }
 
 /** `5h ██████░░ 68% →94%` + tail — colored bar + projection. barW is shared so the bars align. */
-function usageLine(label: string, pct: number | null, proj: number | null, barW: number, tail: string): string {
+function usageLine(
+  label: string,
+  pct: number | null,
+  proj: number | null,
+  barW: number,
+  tail: string,
+): string {
   const pctStr = pct != null ? `${Math.round(pct)}%` : "--%";
   const b = bar((pct ?? 0) / 100, barW);
   const body = pct != null ? colorByPct(`${b} ${pctStr}`, pct) : `${b} ${pctStr}`;
@@ -66,10 +68,13 @@ function termWidth(): number {
   return Math.max(16, Math.min(c, 44));
 }
 
-/** Render the two usage bars (5h + 7d) sized to the pane. */
-export function renderFrame(u: UsageSnapshot): string {
-  const W = termWidth();
-  const now = Date.now();
+/**
+ * Render the two usage bars (5h + 7d) sized to the pane. `width` and `now` may be
+ * injected for tests; they default to the live terminal width and wall clock.
+ */
+export function renderFrame(u: UsageSnapshot, opts: { width?: number; now?: number } = {}): string {
+  const W = opts.width ?? termWidth();
+  const now = opts.now ?? Date.now();
 
   let reset5h = resetTail(u.fiveHourResetAt, now);
   let reset7d = resetTail(u.sevenDayResetAt, now);
