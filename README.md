@@ -13,6 +13,7 @@ Ghostty で `claude` を使っている間、tmux の左下ペインに表示し
 「これは**常に見ておきたい**な」と思ったものを、左下のこの小さなペインに**随時追加していく**前提で作っています。今は Claude の使用量を出していますが、今後ほしくなったものを足していきます。
 
 **現在表示しているもの**
+
 - **Claude の使用量** … 5時間 / 週次のレート制限バー、リセットまでの残り時間（`⏳`）、現ペースでの着地予測（`→NN%`）。緑/黄/赤で色分け。
 
 > `→NN%` = そのウィンドウの平均ペースで進んだ場合、リセット時点で何%になるかの予測（超過ペースなら赤）。
@@ -74,15 +75,28 @@ myx doctor          # 環境チェック
 `myx launch --fresh` は **対象セッションの外**（新しい Ghostty タブなど）から実行してください。
 セッションの中で実行すると、再構築前に自分自身のプロセスごと kill されます。
 
+## 開発
+
+```bash
+npm install
+npm run typecheck   # tsc --noEmit（型チェック）
+npm test            # node:test のユニットテスト（projection 計算・整形ロジック）
+npm run format      # Prettier 整形（確認のみは npm run format:check）
+npm run once        # 1 フレームだけ stdout に描画
+```
+
+ビルド工程はありません（`tsx` で直接実行）。GitHub Actions の CI が Node 20 / 22 で
+typecheck・テスト・整形チェックを実行します。
+
 ## 設定
 
 任意。`~/.config/myx/config.json`（`config.example.json` 参照）:
 
-| キー | 意味 |
-| --- | --- |
-| `pane.heightLines` | myx ペインの高さ（絶対行数。例 `2`）。窓のリサイズでも維持される |
-| `pane.heightPct` | …または一番左の列に対する割合（`heightLines` 未設定時に使用） |
-| `session` | `myx launch` の tmux セッション名（既定 `myx`） |
+| キー                    | 意味                                                                  |
+| ----------------------- | --------------------------------------------------------------------- |
+| `pane.heightLines`      | myx ペインの高さ（絶対行数。例 `2`）。窓のリサイズでも維持される      |
+| `pane.heightPct`        | …または一番左の列に対する割合（`heightLines` 未設定時に使用）         |
+| `session`               | `myx launch` の tmux セッション名（既定 `myx`）                       |
 | `statuslinePassthrough` | `install-statusline` が自動設定。以前の statusLine を連結するための値 |
 
 ## メモ
