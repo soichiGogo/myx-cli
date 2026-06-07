@@ -26,8 +26,10 @@ runs `claude` in **Ghostty**, showing:
   ToS-gray) — rejected. Instead: `pct = currentTokens / blockTokenLimit`.
   `blockTokenLimit` = a calibrated number, `"max"` (peak-relative, default), or `null`
   (fall back to a time-elapsed bar). The bar **and** the projection share this denominator.
-- **No burn-rate number.** The second usage line is "projected % at reset"
-  (`projection.totalTokens / blockTokenLimit`); if > 100%, show `上限まで ~Ym`.
+- **No burn-rate number.** Usage is two lines: `5h <bar> ~NN%` then
+  `⏳ <reset>  🔥 NN% proj` — the projected % at reset
+  (`projection.totalTokens / blockTokenLimit`). When on pace to exceed before
+  reset, the second line becomes `🔥 LIMIT <t> ⚠`. Style chosen by the user.
 - **Calendar = iCal secret URL.** Pure Node fetch + `node-ical` (RRULE expansion) →
   next events. Chosen over the Google API for auth simplicity; keep the data source
   swappable so an API backend can be added later. The URL is a **password-grade secret**:
@@ -45,7 +47,7 @@ runs `claude` in **Ghostty**, showing:
 | --- | --- |
 | `src/cli.ts` | arg parsing → `widget` / `launch` / `doctor` |
 | `src/index.ts` | widget render loop (`--once` for one frame) |
-| `src/render.ts` | format the ~32-col frame: bar, OSC 8 links, countdowns |
+| `src/render.ts` | width-aware frame (never wraps): titles truncate, ▶ link compacts, bar scales, ⏳ reset / 🔥 proj |
 | `src/launch.ts` | build the tmux layout |
 | `src/config.ts` | load `~/.config/myx/config.json` + defaults |
 | `src/doctor.ts` | environment checks |
@@ -66,7 +68,7 @@ npm run typecheck   # tsc --noEmit
 - [x] **Phase 1** — scaffold + tmux launcher + placeholder widget (this commit)
 - [ ] **Phase 2** — `usage.ts`: ccusage → real 5h % + projection (γ / calibration)
 - [ ] **Phase 3** — `calendar.ts` + `meeting.ts`: iCal → next events + ▶Join
-- [ ] **Phase 4** — render polish: bar denominator, narrow-width fallback, stale, ⌘+click verification
+- [~] **Phase 4** — render polish: width-aware layout **done**; remaining: bar-denominator calibration, stale UX, ⌘+click verification on real tmux
 - [ ] **Phase 5** — docs + auto-launch on Ghostty start + richer `doctor`
 
 ## Conventions
