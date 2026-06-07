@@ -53,6 +53,5 @@ export function doctor(): void {
 
   const cfg = loadConfig();
   line(fs.existsSync(configPath()), `config (${configPath()})`, fs.existsSync(configPath()) ? "" : "using defaults");
-  line(!!cfg.icalUrl, "icalUrl set", cfg.icalUrl ? "" : "calendar disabled until set (Phase 3)");
   if (cfg.statuslinePassthrough) line(true, "statusLine passthrough", "your previous statusline is chained");
 }

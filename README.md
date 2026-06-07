@@ -1,23 +1,17 @@
 # myx-cli
 
 A small always-on widget for the **bottom-left tmux pane** while you run `claude`
-in Ghostty. It shows:
-
-- **Claude usage** — your official **5-hour** and **weekly** rate-limit bars with
-  reset countdowns, color-coded green/yellow/red.
-- The **next 2 Google Calendar events**, with a clickable **▶Join** for events
-  that have an online-meeting link (⌘+click — OSC 8 hyperlink).
+in Ghostty. It shows your official Claude usage:
 
 ```
-🗓 10:00 Standup   23m ▶Join
-🗓 14:00 1on1       4h
-──────────────────────────
-5h ██████░░ 68% →94% ⏳3h18m
-7d ███░░░░░ 41% →48%
+5h ████████░░░░ 28% →44%  ⏳3h18m
+7d █████░░░░░░░ 35% →64%
 ```
 
-`→NN%` is the projected usage at that window's reset if your average pace so far
-in the window continues.
+- **5-hour** and **weekly** rate-limit bars with reset countdowns, color-coded
+  green / yellow / red.
+- `→NN%` is the projected usage at that window's reset if your average pace so far
+  in the window continues (red when you're on pace to exceed).
 
 ## How it works
 
@@ -26,20 +20,19 @@ in the window continues.
 - **Usage**: the official 5h/7d percentages come from the JSON Claude Code passes
   to its `statusLine` command (`rate_limits.*`). `myx statusline` caches that
   payload; the widget reads the cache. No API keys, no estimation.
-- **Calendar** (Phase 3): an iCal secret URL is fetched and parsed in-process.
 
 ## Quick start
 
 ```bash
 npm install
-npm run once                 # render a single frame to check the layout
+npm run once                # render a single frame
 
-# wire official 5h/7d usage into the widget (backs up settings.json,
-# chains any existing statusLine), then restart Claude Code:
+# wire official usage into the widget (backs up settings.json and chains any
+# existing statusLine), then restart Claude Code:
 ./bin/myx install-statusline
 
-# one-time tmux setup (colors + ⌘+click links):
-cat scripts/tmux-myx.conf >> ~/.tmux.conf   # then restart tmux
+# one-time tmux setup (truecolor + mouse): add scripts/tmux-myx.conf to your
+# tmux config (e.g. ~/.config/tmux/tmux.conf), then restart tmux
 
 ./bin/myx launch            # build the layout and attach; run `claude` in the main pane
 ./bin/myx doctor            # check tmux / statusLine / cache / config
@@ -47,27 +40,16 @@ cat scripts/tmux-myx.conf >> ~/.tmux.conf   # then restart tmux
 
 ## Configuration
 
-Config lives at `~/.config/myx/config.json` (see `config.example.json`).
-
-> The `icalUrl` is a **secret** (anyone with it can read your calendar). It is
-> kept outside the repo and must never be committed.
-
-Set it without hand-editing JSON:
-
-```bash
-./bin/myx set-ical 'https://calendar.google.com/calendar/ical/.../private-.../basic.ics'
-```
+Optional, at `~/.config/myx/config.json` (see `config.example.json`):
 
 | Key | Meaning |
 | --- | --- |
-| `icalUrl` | Google Calendar → Settings → *Integrate calendar* → **Secret address in iCal format** |
-| `refresh` | poll intervals (seconds) for usage / calendar |
-| `events` | how many upcoming events to show |
 | `pane` | widget pane size: `heightPct` of the window, `leftWidthPct` of the bottom strip |
+| `session` | tmux session name for `myx launch` |
 | `statuslinePassthrough` | set automatically by `install-statusline` to chain your previous statusLine |
 
 ## Status
 
-Phases 1–3 are done: tmux launcher + widget, official 5h/7d usage via statusLine,
-and the iCal calendar (recurring events + ▶Join). Set `icalUrl` to see your own
-events. See `CLAUDE.md` for remaining polish.
+Usage display (official 5h/7d via the statusLine) is done. An earlier calendar
+feature was removed to keep the widget focused on usage; it's recoverable from git
+history if ever wanted.
