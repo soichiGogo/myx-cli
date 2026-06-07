@@ -3,8 +3,11 @@ import path from "node:path";
 import fs from "node:fs";
 
 export interface MyxConfig {
-  /** Height of the myx widget pane as a % of the leftmost column. */
-  pane: { heightPct: number };
+  /**
+   * Height of the myx widget pane. `heightLines` (absolute terminal rows) wins
+   * when set; otherwise `heightPct` is a percentage of the leftmost column.
+   */
+  pane: { heightPct: number; heightLines?: number };
   /** tmux session name used by `myx launch`. */
   session: string;
   /** Existing statusLine command to chain after caching rate limits. */

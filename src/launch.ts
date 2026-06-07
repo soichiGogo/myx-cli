@@ -44,9 +44,11 @@ export function launch(opts: { attach: boolean }): void {
   const col1 = tmuxOut(["new-session", "-d", "-s", session, "-c", cwd, "-P", "-F", "#{pane_id}"]);
   for (let i = 0; i < 3; i++) tmux(["split-window", "-h", "-c", cwd]); // → four columns
   tmux(["select-layout", "-t", session, "even-horizontal"]); // equalize the column widths
-  // widget pane at the bottom of the leftmost column
+  // widget pane at the bottom of the leftmost column.
+  // -l takes absolute rows (heightLines) or a percentage of the column.
+  const paneSize = cfg.pane.heightLines != null ? `${cfg.pane.heightLines}` : `${cfg.pane.heightPct}%`;
   const widget = tmuxOut([
-    "split-window", "-v", "-l", `${cfg.pane.heightPct}%`, "-c", cwd, "-t", col1, "-P", "-F", "#{pane_id}",
+    "split-window", "-v", "-l", paneSize, "-c", cwd, "-t", col1, "-P", "-F", "#{pane_id}",
   ]);
   tmux(["send-keys", "-t", widget, `${myx} widget`, "Enter"]);
   tmux(["select-pane", "-t", col1]); // focus the top-left work shell

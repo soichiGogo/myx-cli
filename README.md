@@ -28,6 +28,10 @@ in Ghostty. It shows your official Claude usage:
 npm install
 npm run once                # render a single frame
 
+# put `myx` on PATH so `myx launch` works from any project directory
+# (~/.local/bin must be on your PATH):
+ln -sf "$PWD/bin/myx" ~/.local/bin/myx
+
 # wire official usage into the widget (backs up settings.json and chains any
 # existing statusLine), then restart Claude Code:
 ./bin/myx install-statusline
@@ -45,7 +49,7 @@ Optional, at `~/.config/myx/config.json` (see `config.example.json`):
 
 | Key | Meaning |
 | --- | --- |
-| `pane` | widget pane size: `heightPct` of the window, `leftWidthPct` of the bottom strip |
+| `pane` | myx pane height: `heightLines` (absolute rows) wins, else `heightPct` (% of the leftmost column) |
 | `session` | tmux session name for `myx launch` |
 | `statuslinePassthrough` | set automatically by `install-statusline` to chain your previous statusLine |
 

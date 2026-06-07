@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 # myx launcher shim — runs the TypeScript CLI through the project-local tsx.
+# Resolves symlinks so `myx` works when symlinked onto PATH (e.g. ~/.local/bin/myx).
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+HERE="$(cd -P "$(dirname "$SOURCE")/.." >/dev/null 2>&1 && pwd)"
 TSX="$HERE/node_modules/.bin/tsx"
 if [[ ! -x "$TSX" ]]; then
   echo "myx: dependencies not installed. Run 'npm install' in $HERE" >&2

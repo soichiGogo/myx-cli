@@ -3,6 +3,12 @@ import { launch } from "./launch.ts";
 import { doctor } from "./doctor.ts";
 import { statusline, installStatusline } from "./statusline.ts";
 
+// Exit quietly when a downstream pipe closes (e.g. `myx doctor | head`).
+process.stdout.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EPIPE") process.exit(0);
+  throw err;
+});
+
 const USAGE = `usage: myx <command> [options]
 
 commands:
