@@ -1,0 +1,9 @@
+{
+  "icalUrl": "https://calendar.google.com/calendar/ical/REPLACE_ME/private-REPLACE_ME/basic.ics",
+  "timezone": "Asia/Tokyo",
+  "blockTokenLimit": "max",
+  "refresh": { "usageSec": 10, "calendarSec": 120 },
+  "events": 2,
+  "pane": { "heightPct": 24, "leftWidthPct": 32 },
+  "session": "myx"
+}

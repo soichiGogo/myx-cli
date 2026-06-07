@@ -1,0 +1,25 @@
+{
+  "name": "myx-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ghostty/tmux bottom-left widget: Claude 5h usage % + next Google Calendar events",
+  "type": "module",
+  "bin": {
+    "myx": "bin/myx"
+  },
+  "scripts": {
+    "widget": "tsx src/cli.ts widget",
+    "once": "tsx src/cli.ts widget --once",
+    "launch": "tsx src/cli.ts launch",
+    "doctor": "tsx src/cli.ts doctor",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

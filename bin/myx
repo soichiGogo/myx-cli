@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# myx launcher shim — runs the TypeScript CLI through the project-local tsx.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TSX="$HERE/node_modules/.bin/tsx"
+if [[ ! -x "$TSX" ]]; then
+  echo "myx: dependencies not installed. Run 'npm install' in $HERE" >&2
+  exit 1
+fi
+exec "$TSX" "$HERE/src/cli.ts" "$@"
