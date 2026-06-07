@@ -62,5 +62,6 @@ Config lives at `~/.config/myx/config.json` (see `config.example.json`).
 
 ## Status
 
-Phase 1 (tmux launcher + widget) and Phase 2 (official usage via statusLine) are
-done. Calendar wiring is next — see `CLAUDE.md`.
+Phases 1–3 are done: tmux launcher + widget, official 5h/7d usage via statusLine,
+and the iCal calendar (recurring events + ▶Join). Set `icalUrl` to see your own
+events. See `CLAUDE.md` for remaining polish.

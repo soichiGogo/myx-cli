@@ -51,11 +51,13 @@ runs `claude` in **Ghostty**, showing:
 | File | Responsibility |
 | --- | --- |
 | `src/cli.ts` | arg parsing → `widget` / `launch` / `statusline` / `install-statusline` / `doctor` |
-| `src/index.ts` | widget render loop (`--once` for one frame) |
+| `src/index.ts` | widget render loop + calendar refresh (`--once` for one frame) |
 | `src/render.ts` | width-aware frame (never wraps): titles truncate, ▶ link compacts, aligned 5h/7d colored bars |
 | `src/launch.ts` | build the tmux layout |
 | `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline` |
 | `src/usage.ts` | read the cached official rate limits → `UsageSnapshot` |
+| `src/calendar.ts` | fetch + parse the iCal URL, expand recurrences → next events |
+| `src/meeting.ts` | extract an online-meeting URL from a VEVENT |
 | `src/config.ts` | load `~/.config/myx/config.json` + defaults |
 | `src/doctor.ts` | environment checks |
 | `src/types.ts` | shared types (`CalEvent`, `UsageSnapshot`, `WidgetState`) |
@@ -74,12 +76,14 @@ npm run typecheck   # tsc --noEmit
 
 - [x] **Phase 1** — scaffold + tmux launcher + placeholder widget
 - [x] **Phase 2** — official usage via statusLine (δ): `statusline.ts` cache + `usage.ts` read → aligned 5h/7d colored bars
-- [ ] **Phase 3** — `calendar.ts` + `meeting.ts`: iCal → next events + ▶Join
-- [~] **Phase 4** — render polish: width-aware layout + color **done**; remaining: stale UX, ⌘+click verification on real tmux, optional projection
+- [x] **Phase 3** — `calendar.ts` + `meeting.ts`: iCal → next events + ▶Join (node-ical `expandRecurringEvent`)
+- [~] **Phase 4** — width-aware layout + color + projection **done**; remaining: all-day events render at 00:00, stale UX, ⌘+click verification on real tmux, statusline startup latency (~150ms)
 - [ ] **Phase 5** — docs + auto-launch on Ghostty start + richer `doctor`
 
 ## Conventions
 
 - ESM, Node ≥ 20, run via `tsx` (no build step); `tsc` is typecheck-only.
+- node-ical is **CommonJS**: `import nodeIcal from "node-ical"; const { sync, expandRecurringEvent } = nodeIcal`.
+  Named imports (`import { sync } from "node-ical"`) typecheck but throw at runtime under tsx — don't reintroduce.
 - Follow the user's global rules: commits are authored normally with **no
   `Co-Authored-By` trailer** and no tool-promo lines.
