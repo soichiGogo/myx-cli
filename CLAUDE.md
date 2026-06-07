@@ -26,10 +26,15 @@ runs `claude` in **Ghostty**, showing:
   (Earlier finding: the rate-limit headers are *not* persisted to disk, so the statusLine
   stdin payload is the supported way to get the official numbers — don't re-litigate.)
 - **Usage display = two colored bars** like Claude Code's `/usage`:
-  `5h <bar> NN% ⏳<reset>` and `7d <bar> NN%`. Both bars share one width (aligned);
-  color thresholds green <50 / yellow <80 / red ≥80. No `$`, no burn-rate. (A projection
-  `→NN%` was explored; the user chose the dual-bar view. It could be re-added by
-  time-sampling the official % across ticks — still no ccusage needed.)
+  `5h <bar> NN% →MM% ⏳<reset>` and `7d <bar> NN% →MM%`. Both bars share one width
+  (aligned); color thresholds green <50 / yellow <80 / red ≥80, applied to the bar
+  and — independently — to the `→` projection (so heading-to-red shows red). `→MM%`
+  is the projected usage at that window's reset assuming the **average pace so far in
+  the window** continues: `pct / fractionElapsed`, where `fractionElapsed` comes from
+  `resets_at` minus the window length (5h / 7d). Null when <5% elapsed. Computed in
+  `usage.ts` from the official numbers — no history, no ccusage. No `$`, no burn-rate.
+  (Recent-burst rate was rejected: extrapolating a few minutes over a 7-day window
+  is nonsense; average-pace is stable and meaningful for both windows.)
 - **Calendar = iCal secret URL.** Pure Node fetch + `node-ical` (RRULE expansion) →
   next events. Chosen over the Google API for auth simplicity; keep the data source
   swappable so an API backend can be added later. The URL is a **password-grade secret**:

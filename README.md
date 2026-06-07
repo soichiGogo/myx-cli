@@ -12,9 +12,12 @@ in Ghostty. It shows:
 🗓 10:00 Standup   23m ▶Join
 🗓 14:00 1on1       4h
 ──────────────────────────
-5h ██████░░ 68% ⏳3h18m
-7d ███░░░░░ 41%
+5h ██████░░ 68% →94% ⏳3h18m
+7d ███░░░░░ 41% →48%
 ```
+
+`→NN%` is the projected usage at that window's reset if your average pace so far
+in the window continues.
 
 ## How it works
 

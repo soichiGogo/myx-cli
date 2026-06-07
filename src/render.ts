@@ -79,12 +79,13 @@ function minutesUntil(epochSeconds: number | null, nowMs: number): number | null
   return epochSeconds == null ? null : (epochSeconds * 1000 - nowMs) / 60000;
 }
 
-/** `5h ██████░░ 68%` + tail — colored bar (green/yellow/red). barW is shared so the bars align. */
-function usageLine(label: string, pct: number | null, barW: number, tail: string): string {
+/** `5h ██████░░ 68% →94%` + tail — colored bar + projection. barW is shared so the bars align. */
+function usageLine(label: string, pct: number | null, proj: number | null, barW: number, tail: string): string {
   const pctStr = pct != null ? `${Math.round(pct)}%` : "--%";
   const b = bar((pct ?? 0) / 100, barW);
   const body = pct != null ? colorByPct(`${b} ${pctStr}`, pct) : `${b} ${pctStr}`;
-  return `${label} ${body}${tail}`;
+  const projStr = proj != null ? " " + colorByPct(`→${Math.round(proj)}%`, proj) : "";
+  return `${label} ${body}${projStr}${tail}`;
 }
 
 /** Pane width, clamped to a tidy range. */
@@ -121,15 +122,15 @@ export function renderFrame(state: WidgetState, cfg: MyxConfig): string {
   const u = state.usage;
   const reset5h = minutesUntil(u.fiveHourResetAt, now);
   let resetStr = reset5h != null ? `  ⏳${dur(reset5h)}` : "";
-  // "5h " + bar + " " + pct(<=4) + margin ~= 9 fixed cells; both bars share barW so they align.
-  let barW = W - 9 - vis(resetStr);
+  // fixed cells around the bar: "5h "(3) + sp(1) + pct(<=4) + " →NNN%"(<=6) + margin(1) = 15
+  let barW = W - 15 - vis(resetStr);
   if (barW < 5 && resetStr) {
     resetStr = "";
-    barW = W - 9;
+    barW = W - 15;
   }
   barW = Math.max(4, Math.min(12, barW));
-  lines.push(usageLine("5h", u.fiveHourPct, barW, resetStr));
-  lines.push(usageLine("7d", u.sevenDayPct, barW, u.stale ? "  " + dim("⚠") : ""));
+  lines.push(usageLine("5h", u.fiveHourPct, u.projectedFiveHourPct, barW, resetStr));
+  lines.push(usageLine("7d", u.sevenDayPct, u.projectedSevenDayPct, barW, u.stale ? "  " + dim("⚠") : ""));
 
   return lines.join("\n");
 }

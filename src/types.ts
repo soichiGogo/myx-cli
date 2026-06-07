@@ -15,6 +15,9 @@ export interface UsageSnapshot {
   fiveHourResetAt: number | null; // epoch seconds
   sevenDayPct: number | null;
   sevenDayResetAt: number | null; // epoch seconds
+  /** Projected usage at each window's reset at the window's average pace (0..). */
+  projectedFiveHourPct: number | null;
+  projectedSevenDayPct: number | null;
   /** epoch ms when the cache was last written by `myx statusline`. */
   updatedAt: number | null;
   /** True when the cache is missing or older than the freshness window. */
