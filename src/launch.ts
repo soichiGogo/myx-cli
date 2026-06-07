@@ -13,7 +13,7 @@ import { loadConfig } from "./config.ts";
  *   │myx │    │    │    │
  *   └────┴────┴────┴────┘
  */
-export function launch(opts: { attach: boolean }): void {
+export function launch(opts: { attach: boolean; fresh: boolean }): void {
   const cfg = loadConfig();
   const session = cfg.session;
   const cwd = process.cwd();
@@ -34,9 +34,15 @@ export function launch(opts: { attach: boolean }): void {
     }
   };
 
+  if (opts.fresh && sessionExists()) tmux(["kill-session", "-t", session]);
   if (sessionExists()) {
-    if (opts.attach) tmux(["attach", "-t", session], true);
-    else console.log(`tmux session '${session}' already exists.`);
+    // An existing session is reused as-is; rebuild with --fresh to apply layout/config changes.
+    if (opts.attach) {
+      console.log(`Attaching to existing '${session}' (use \`myx launch --fresh\` to rebuild).`);
+      tmux(["attach", "-t", session], true);
+    } else {
+      console.log(`tmux session '${session}' already exists — use \`--fresh\` to rebuild.`);
+    }
     return;
   }
 

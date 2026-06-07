@@ -21,6 +21,7 @@ commands:
 options:
   --once              widget: render a single frame and exit
   --no-attach         launch: create the tmux session without attaching
+  --fresh             launch: kill an existing session first, then rebuild
 `;
 
 async function main(): Promise<void> {
@@ -34,7 +35,7 @@ async function main(): Promise<void> {
       await runWidget({ once: flags.has("--once") });
       break;
     case "launch":
-      launch({ attach: !flags.has("--no-attach") });
+      launch({ attach: !flags.has("--no-attach"), fresh: flags.has("--fresh") });
       break;
     case "statusline":
       statusline();

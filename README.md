@@ -40,6 +40,7 @@ ln -sf "$PWD/bin/myx" ~/.local/bin/myx
 # tmux config (e.g. ~/.config/tmux/tmux.conf), then restart tmux
 
 ./bin/myx launch            # build the layout and attach; run `claude` in any work pane
+./bin/myx launch --fresh    # rebuild an existing session after changing config/layout
 ./bin/myx doctor            # check tmux / statusLine / cache / config
 ```
 
