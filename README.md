@@ -16,7 +16,8 @@ in Ghostty. It shows your official Claude usage:
 ## How it works
 
 - **Layout**: Ghostty has no IPC to place a process in a split, so the layout is
-  driven by tmux — a main pane (claude) plus a small bottom-left widget pane.
+  driven by tmux — `myx launch` opens four columns of shells in your current
+  directory, with the widget tucked into the bottom of the leftmost column.
 - **Usage**: the official 5h/7d percentages come from the JSON Claude Code passes
   to its `statusLine` command (`rate_limits.*`). `myx statusline` caches that
   payload; the widget reads the cache. No API keys, no estimation.
@@ -34,7 +35,7 @@ npm run once                # render a single frame
 # one-time tmux setup (truecolor + mouse): add scripts/tmux-myx.conf to your
 # tmux config (e.g. ~/.config/tmux/tmux.conf), then restart tmux
 
-./bin/myx launch            # build the layout and attach; run `claude` in the main pane
+./bin/myx launch            # build the layout and attach; run `claude` in any work pane
 ./bin/myx doctor            # check tmux / statusLine / cache / config
 ```
 

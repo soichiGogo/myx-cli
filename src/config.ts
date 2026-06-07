@@ -3,7 +3,8 @@ import path from "node:path";
 import fs from "node:fs";
 
 export interface MyxConfig {
-  pane: { heightPct: number; leftWidthPct: number };
+  /** Height of the myx widget pane as a % of the leftmost column. */
+  pane: { heightPct: number };
   /** tmux session name used by `myx launch`. */
   session: string;
   /** Existing statusLine command to chain after caching rate limits. */
@@ -11,7 +12,7 @@ export interface MyxConfig {
 }
 
 const DEFAULTS: MyxConfig = {
-  pane: { heightPct: 24, leftWidthPct: 32 },
+  pane: { heightPct: 24 },
   session: "myx",
 };
 

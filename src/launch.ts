@@ -6,17 +6,18 @@ import { loadConfig } from "./config.ts";
 /**
  * Build the tmux layout and (optionally) attach:
  *
- *   ┌───────────────────────────┐
- *   │ main (pane 0.0) — claude   │
- *   ├──────────────┬────────────┤
- *   │ widget 0.1   │ shell 0.2  │   <- bottom strip (heightPct), widget = leftWidthPct
- *   └──────────────┴────────────┘
+ *   ┌────┬────┬────┬────┐
+ *   │work│    │    │    │   four equal columns of shells in the launch dir;
+ *   │    │work│work│work│   the leftmost column is split so its bottom holds
+ *   ├────┤    │    │    │   the myx widget.
+ *   │myx │    │    │    │
+ *   └────┴────┴────┴────┘
  */
 export function launch(opts: { attach: boolean }): void {
   const cfg = loadConfig();
   const session = cfg.session;
-  const here = path.dirname(fileURLToPath(import.meta.url)); // src/
-  const myx = path.join(here, "..", "bin", "myx");
+  const cwd = process.cwd();
+  const myx = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "myx");
 
   const tmux = (args: string[], inherit = false): void => {
     execFileSync("tmux", args, inherit ? { stdio: "inherit" } : { encoding: "utf8" });
@@ -34,29 +35,24 @@ export function launch(opts: { attach: boolean }): void {
   };
 
   if (sessionExists()) {
-    if (opts.attach) {
-      tmux(["attach", "-t", session], true);
-    } else {
-      console.log(`tmux session '${session}' already exists.`);
-    }
+    if (opts.attach) tmux(["attach", "-t", session], true);
+    else console.log(`tmux session '${session}' already exists.`);
     return;
   }
 
-  // Use pane ids (%N) so the layout is robust to pane-base-index settings.
-  const mainId = tmuxOut(["new-session", "-d", "-s", session, "-P", "-F", "#{pane_id}"]);
-  // carve the bottom strip; the widget keeps this (left) pane
-  const widgetId = tmuxOut([
-    "split-window", "-v", "-l", `${cfg.pane.heightPct}%`, "-t", mainId, "-P", "-F", "#{pane_id}",
+  // Pane ids (%N) keep the layout robust to pane-base-index settings.
+  const col1 = tmuxOut(["new-session", "-d", "-s", session, "-c", cwd, "-P", "-F", "#{pane_id}"]);
+  for (let i = 0; i < 3; i++) tmux(["split-window", "-h", "-c", cwd]); // → four columns
+  tmux(["select-layout", "-t", session, "even-horizontal"]); // equalize the column widths
+  // widget pane at the bottom of the leftmost column
+  const widget = tmuxOut([
+    "split-window", "-v", "-l", `${cfg.pane.heightPct}%`, "-c", cwd, "-t", col1, "-P", "-F", "#{pane_id}",
   ]);
-  // split the bottom strip: shell on the right, widget stays on the left
-  tmux(["split-window", "-h", "-l", `${100 - cfg.pane.leftWidthPct}%`, "-t", widgetId]);
-  // run the widget in the bottom-left pane
-  tmux(["send-keys", "-t", widgetId, `${myx} widget`, "Enter"]);
-  // focus the main pane for claude
-  tmux(["select-pane", "-t", mainId]);
+  tmux(["send-keys", "-t", widget, `${myx} widget`, "Enter"]);
+  tmux(["select-pane", "-t", col1]); // focus the top-left work shell
 
   if (opts.attach) {
-    console.log("Tip: run `claude` in the main pane. Detach with Ctrl-b d.");
+    console.log("Tip: run `claude` in any work pane (e.g. the top-left). Detach with Ctrl-b d.");
     tmux(["attach", "-t", session], true);
   } else {
     console.log(`tmux session '${session}' created (detached).`);

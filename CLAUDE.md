@@ -12,7 +12,8 @@ rate-limit bars with reset countdowns and a projection.
 
 - **Layout = tmux.** Ghostty exposes no IPC to place a process in a given split
   (no `kitten @` / `wezterm cli` equivalent — verified). So the layout is built by
-  tmux: main pane (claude) + bottom-left widget + bottom-right shell. See `src/launch.ts`.
+  tmux: `myx launch` opens four equal columns of shells in the launch dir (`-c $PWD`);
+  the leftmost column is split so its bottom runs the widget. See `src/launch.ts`.
 - **Usage = official rate limits via statusLine (δ).** Claude Code passes
   `rate_limits.five_hour.{used_percentage,resets_at}` and `.seven_day.{…}` to its
   `statusLine` command on stdin (documented). `myx statusline` caches that payload to
