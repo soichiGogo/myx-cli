@@ -2,12 +2,14 @@ import { runWidget } from "./index.ts";
 import { launch } from "./launch.ts";
 import { doctor } from "./doctor.ts";
 import { statusline, installStatusline } from "./statusline.ts";
+import { updateConfig } from "./config.ts";
 
 const USAGE = `usage: myx <command> [options]
 
 commands:
   widget              render the status widget (default)
   launch              build the tmux layout and attach
+  set-ical <url>      save your iCal secret URL to the config
   install-statusline  point Claude Code's statusLine at myx (backs up settings)
   statusline          internal: cache official rate limits from Claude Code stdin
   doctor              check environment (tmux, statusLine, config)
@@ -20,7 +22,8 @@ options:
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const flags = new Set(argv.filter((a) => a.startsWith("-")));
-  const cmd = argv.find((a) => !a.startsWith("-")) ?? "widget";
+  const positionals = argv.filter((a) => !a.startsWith("-"));
+  const cmd = positionals[0] ?? "widget";
 
   switch (cmd) {
     case "widget":
@@ -32,6 +35,16 @@ async function main(): Promise<void> {
     case "statusline":
       statusline();
       break;
+    case "set-ical": {
+      const url = positionals[1];
+      if (!url) {
+        console.error("usage: myx set-ical <ical-url>");
+        process.exit(1);
+      }
+      updateConfig({ icalUrl: url });
+      console.log(`✓ icalUrl saved (${url.slice(0, 48)}…) to ~/.config/myx/config.json`);
+      break;
+    }
     case "install-statusline":
       installStatusline();
       break;

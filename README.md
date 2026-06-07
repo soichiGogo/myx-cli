@@ -52,6 +52,12 @@ Config lives at `~/.config/myx/config.json` (see `config.example.json`).
 > The `icalUrl` is a **secret** (anyone with it can read your calendar). It is
 > kept outside the repo and must never be committed.
 
+Set it without hand-editing JSON:
+
+```bash
+./bin/myx set-ical 'https://calendar.google.com/calendar/ical/.../private-.../basic.ics'
+```
+
 | Key | Meaning |
 | --- | --- |
 | `icalUrl` | Google Calendar → Settings → *Integrate calendar* → **Secret address in iCal format** |

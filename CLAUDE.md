@@ -50,7 +50,7 @@ runs `claude` in **Ghostty**, showing:
 
 | File | Responsibility |
 | --- | --- |
-| `src/cli.ts` | arg parsing → `widget` / `launch` / `statusline` / `install-statusline` / `doctor` |
+| `src/cli.ts` | arg parsing → `widget` / `launch` / `set-ical` / `statusline` / `install-statusline` / `doctor` |
 | `src/index.ts` | widget render loop + calendar refresh (`--once` for one frame) |
 | `src/render.ts` | width-aware frame (never wraps): titles truncate, ▶ link compacts, aligned 5h/7d colored bars |
 | `src/launch.ts` | build the tmux layout |
