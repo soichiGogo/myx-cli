@@ -3,8 +3,8 @@
 A small always-on widget for the **bottom-left tmux pane** while you run `claude`
 in Ghostty. It shows:
 
-- **Claude 5-hour block usage %** (estimated; from [`ccusage`](https://github.com/ryoppippi/ccusage))
-  and the projected usage at the next reset.
+- **Claude usage** — your official **5-hour** and **weekly** rate-limit bars with
+  reset countdowns, color-coded green/yellow/red.
 - The **next 2 Google Calendar events**, with a clickable **▶Join** for events
   that have an online-meeting link (⌘+click — OSC 8 hyperlink).
 
@@ -12,26 +12,34 @@ in Ghostty. It shows:
 🗓 10:00 Standup   23m ▶Join
 🗓 14:00 1on1       4h
 ──────────────────────────
-5h ████████░░░░ ~68%
-⏳ 3h18m     🔥 97% proj
+5h ██████░░ 68% ⏳3h18m
+7d ███░░░░░ 41%
 ```
 
-## Why tmux?
+## How it works
 
-Ghostty has no IPC to place a process in a specific split, so the layout is
-driven by tmux: a main pane (claude) plus a small bottom-left widget pane.
+- **Layout**: Ghostty has no IPC to place a process in a split, so the layout is
+  driven by tmux — a main pane (claude) plus a small bottom-left widget pane.
+- **Usage**: the official 5h/7d percentages come from the JSON Claude Code passes
+  to its `statusLine` command (`rate_limits.*`). `myx statusline` caches that
+  payload; the widget reads the cache. No API keys, no estimation.
+- **Calendar** (Phase 3): an iCal secret URL is fetched and parsed in-process.
 
 ## Quick start
 
 ```bash
 npm install
-npm run once       # render a single frame to check the layout
-npx tsx src/cli.ts doctor   # or: ./bin/myx doctor
+npm run once                 # render a single frame to check the layout
+
+# wire official 5h/7d usage into the widget (backs up settings.json,
+# chains any existing statusLine), then restart Claude Code:
+./bin/myx install-statusline
 
 # one-time tmux setup (colors + ⌘+click links):
 cat scripts/tmux-myx.conf >> ~/.tmux.conf   # then restart tmux
 
-./bin/myx launch   # build the layout and attach; run `claude` in the main pane
+./bin/myx launch            # build the layout and attach; run `claude` in the main pane
+./bin/myx doctor            # check tmux / statusLine / cache / config
 ```
 
 ## Configuration
@@ -44,17 +52,12 @@ Config lives at `~/.config/myx/config.json` (see `config.example.json`).
 | Key | Meaning |
 | --- | --- |
 | `icalUrl` | Google Calendar → Settings → *Integrate calendar* → **Secret address in iCal format** |
-| `blockTokenLimit` | `number` (calibrated), `"max"` (peak-relative estimate), or `null` (time-elapsed bar) |
 | `refresh` | poll intervals (seconds) for usage / calendar |
+| `events` | how many upcoming events to show |
 | `pane` | widget pane size: `heightPct` of the window, `leftWidthPct` of the bottom strip |
-
-### Calibrating the 5h %
-
-Anthropic does not publish the exact 5h token limit, so the % is an estimate.
-For an accurate denominator: the next time you actually hit the Max limit, note
-`ccusage blocks --active` → `totalTokens` and set that as `blockTokenLimit`.
+| `statuslinePassthrough` | set automatically by `install-statusline` to chain your previous statusLine |
 
 ## Status
 
-Phase 1 (scaffold + tmux launcher + placeholder widget). Usage and calendar wiring
-land in later phases — see `CLAUDE.md`.
+Phase 1 (tmux launcher + widget) and Phase 2 (official usage via statusLine) are
+done. Calendar wiring is next — see `CLAUDE.md`.

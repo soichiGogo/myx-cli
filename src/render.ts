@@ -66,6 +66,27 @@ function hhmm(d: Date): string {
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+function colorByPct(s: string, pct: number): string {
+  const code = pct < 50 ? 32 : pct < 80 ? 33 : 31; // green / yellow / red
+  return `${ESC}[${code}m${s}${ESC}[0m`;
+}
+
+function dim(s: string): string {
+  return `${ESC}[2m${s}${ESC}[0m`;
+}
+
+function minutesUntil(epochSeconds: number | null, nowMs: number): number | null {
+  return epochSeconds == null ? null : (epochSeconds * 1000 - nowMs) / 60000;
+}
+
+/** `5h ██████░░ 68%` + tail — colored bar (green/yellow/red). barW is shared so the bars align. */
+function usageLine(label: string, pct: number | null, barW: number, tail: string): string {
+  const pctStr = pct != null ? `${Math.round(pct)}%` : "--%";
+  const b = bar((pct ?? 0) / 100, barW);
+  const body = pct != null ? colorByPct(`${b} ${pctStr}`, pct) : `${b} ${pctStr}`;
+  return `${label} ${body}${tail}`;
+}
+
 /** Pane width, clamped to a tidy range. */
 function termWidth(): number {
   const raw = process.stdout.columns ?? Number(process.env.COLUMNS);
@@ -98,22 +119,17 @@ export function renderFrame(state: WidgetState, cfg: MyxConfig): string {
   lines.push("─".repeat(W));
 
   const u = state.usage;
-  const barW = Math.max(6, Math.min(12, W - 12));
-  const tilde = u.estimated ? "~" : "";
-  lines.push(u.pct != null ? `5h ${bar(u.pct, barW)} ${tilde}${Math.round(u.pct * 100)}%` : `5h ${bar(0, barW)} --%`);
-
-  if (u.projectedPct != null && u.projectedPct > 1 && u.minutesToLimit != null) {
-    // On pace to hit the cap before reset — the urgent case.
-    lines.push(`🔥 LIMIT ${dur(u.minutesToLimit)} ⚠`);
-  } else {
-    const left = `⏳ ${dur(u.resetInMinutes)}`;
-    const leftVis = 3 + vis(dur(u.resetInMinutes));
-    const pct = u.projectedPct != null ? Math.round(u.projectedPct * 100) : null;
-    let proj = pct != null ? `${pct}% proj` : "--";
-    if (pct != null && W - leftVis - (3 + vis(proj)) < 1) proj = `${pct}%`; // drop "proj" when tight
-    lines.push(spread(left, leftVis, `🔥 ${proj}`, 3 + vis(proj), W));
+  const reset5h = minutesUntil(u.fiveHourResetAt, now);
+  let resetStr = reset5h != null ? `  ⏳${dur(reset5h)}` : "";
+  // "5h " + bar + " " + pct(<=4) + margin ~= 9 fixed cells; both bars share barW so they align.
+  let barW = W - 9 - vis(resetStr);
+  if (barW < 5 && resetStr) {
+    resetStr = "";
+    barW = W - 9;
   }
+  barW = Math.max(4, Math.min(12, barW));
+  lines.push(usageLine("5h", u.fiveHourPct, barW, resetStr));
+  lines.push(usageLine("7d", u.sevenDayPct, barW, u.stale ? "  " + dim("⚠") : ""));
 
-  if (state.stale) lines.push("⚠ stale");
   return lines.join("\n");
 }

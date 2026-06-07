@@ -1,17 +1,20 @@
 import { runWidget } from "./index.ts";
 import { launch } from "./launch.ts";
 import { doctor } from "./doctor.ts";
+import { statusline, installStatusline } from "./statusline.ts";
 
 const USAGE = `usage: myx <command> [options]
 
 commands:
-  widget            render the status widget (default)
-  launch            build the tmux layout and attach
-  doctor            check environment (tmux, ccusage, config)
+  widget              render the status widget (default)
+  launch              build the tmux layout and attach
+  install-statusline  point Claude Code's statusLine at myx (backs up settings)
+  statusline          internal: cache official rate limits from Claude Code stdin
+  doctor              check environment (tmux, statusLine, config)
 
 options:
-  --once            widget: render a single frame and exit
-  --no-attach       launch: create the tmux session without attaching
+  --once              widget: render a single frame and exit
+  --no-attach         launch: create the tmux session without attaching
 `;
 
 async function main(): Promise<void> {
@@ -25,6 +28,12 @@ async function main(): Promise<void> {
       break;
     case "launch":
       launch({ attach: !flags.has("--no-attach") });
+      break;
+    case "statusline":
+      statusline();
+      break;
+    case "install-statusline":
+      installStatusline();
       break;
     case "doctor":
       doctor();

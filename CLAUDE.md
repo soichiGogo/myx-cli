@@ -7,7 +7,7 @@ Guidance for working in this repo. Keep it consistent with the locked design bel
 A TypeScript/Node widget that runs in the **bottom-left tmux pane** while the user
 runs `claude` in **Ghostty**, showing:
 
-1. **Claude 5h-block usage %** (estimated) + projected % at reset.
+1. **Official Claude usage** — 5-hour and weekly rate-limit bars with reset countdowns.
 2. The **next 2 Google Calendar events**, with a clickable **▶Join** for online meetings.
 
 ## Locked design decisions (and why)
@@ -15,21 +15,21 @@ runs `claude` in **Ghostty**, showing:
 - **Layout = tmux.** Ghostty exposes no IPC to place a process in a given split
   (no `kitten @` / `wezterm cli` equivalent — verified). So the layout is built by
   tmux: main pane (claude) + bottom-left widget + bottom-right shell. See `src/launch.ts`.
-- **Usage = ccusage, spawned.** We shell out to `ccusage blocks --active --json`
-  rather than re-parsing `~/.claude/**/*.jsonl` ourselves. Fields used:
-  `totalTokens`, `burnRate.tokensPerMinute`, `projection.{totalTokens,remainingMinutes}`,
-  `startTime`/`endTime`. `costUSD` is **not displayed** (user wants no `$`).
-- **5h % is an estimate (γ).** Anthropic's official 5h limit % is only in the
-  `anthropic-ratelimit-unified-*` response headers (what `/usage` shows) and is **not
-  persisted to disk** (verified: 0 hits across recent transcripts/cache). Reading it
-  live would need the OAuth token + an undocumented endpoint (unofficial, fragile,
-  ToS-gray) — rejected. Instead: `pct = currentTokens / blockTokenLimit`.
-  `blockTokenLimit` = a calibrated number, `"max"` (peak-relative, default), or `null`
-  (fall back to a time-elapsed bar). The bar **and** the projection share this denominator.
-- **No burn-rate number.** Usage is two lines: `5h <bar> ~NN%` then
-  `⏳ <reset>  🔥 NN% proj` — the projected % at reset
-  (`projection.totalTokens / blockTokenLimit`). When on pace to exceed before
-  reset, the second line becomes `🔥 LIMIT <t> ⚠`. Style chosen by the user.
+- **Usage = official rate limits via statusLine (δ).** Claude Code passes
+  `rate_limits.five_hour.{used_percentage,resets_at}` and `.seven_day.{…}` to its
+  `statusLine` command on stdin (documented in the statusline docs). `myx statusline`
+  caches that payload to `~/.cache/myx/usage.json`; the widget reads it (`src/usage.ts`).
+  This **supersedes the earlier ccusage/γ-estimate plan** — the % is now the *official*
+  number, no auth, no calibration, and we also get the weekly limit. `myx
+  install-statusline` wires it up and **chains** any existing statusLine (saved as
+  `statuslinePassthrough`) so the user's own bar is preserved. ccusage is no longer used.
+  (Earlier finding: the rate-limit headers are *not* persisted to disk, so the statusLine
+  stdin payload is the supported way to get the official numbers — don't re-litigate.)
+- **Usage display = two colored bars** like Claude Code's `/usage`:
+  `5h <bar> NN% ⏳<reset>` and `7d <bar> NN%`. Both bars share one width (aligned);
+  color thresholds green <50 / yellow <80 / red ≥80. No `$`, no burn-rate. (A projection
+  `→NN%` was explored; the user chose the dual-bar view. It could be re-added by
+  time-sampling the official % across ticks — still no ccusage needed.)
 - **Calendar = iCal secret URL.** Pure Node fetch + `node-ical` (RRULE expansion) →
   next events. Chosen over the Google API for auth simplicity; keep the data source
   swappable so an API backend can be added later. The URL is a **password-grade secret**:
@@ -45,10 +45,12 @@ runs `claude` in **Ghostty**, showing:
 
 | File | Responsibility |
 | --- | --- |
-| `src/cli.ts` | arg parsing → `widget` / `launch` / `doctor` |
+| `src/cli.ts` | arg parsing → `widget` / `launch` / `statusline` / `install-statusline` / `doctor` |
 | `src/index.ts` | widget render loop (`--once` for one frame) |
-| `src/render.ts` | width-aware frame (never wraps): titles truncate, ▶ link compacts, bar scales, ⏳ reset / 🔥 proj |
+| `src/render.ts` | width-aware frame (never wraps): titles truncate, ▶ link compacts, aligned 5h/7d colored bars |
 | `src/launch.ts` | build the tmux layout |
+| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline` |
+| `src/usage.ts` | read the cached official rate limits → `UsageSnapshot` |
 | `src/config.ts` | load `~/.config/myx/config.json` + defaults |
 | `src/doctor.ts` | environment checks |
 | `src/types.ts` | shared types (`CalEvent`, `UsageSnapshot`, `WidgetState`) |
@@ -65,10 +67,10 @@ npm run typecheck   # tsc --noEmit
 
 ## Roadmap
 
-- [x] **Phase 1** — scaffold + tmux launcher + placeholder widget (this commit)
-- [ ] **Phase 2** — `usage.ts`: ccusage → real 5h % + projection (γ / calibration)
+- [x] **Phase 1** — scaffold + tmux launcher + placeholder widget
+- [x] **Phase 2** — official usage via statusLine (δ): `statusline.ts` cache + `usage.ts` read → aligned 5h/7d colored bars
 - [ ] **Phase 3** — `calendar.ts` + `meeting.ts`: iCal → next events + ▶Join
-- [~] **Phase 4** — render polish: width-aware layout **done**; remaining: bar-denominator calibration, stale UX, ⌘+click verification on real tmux
+- [~] **Phase 4** — render polish: width-aware layout + color **done**; remaining: stale UX, ⌘+click verification on real tmux, optional projection
 - [ ] **Phase 5** — docs + auto-launch on Ghostty start + richer `doctor`
 
 ## Conventions

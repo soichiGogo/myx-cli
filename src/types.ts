@@ -6,24 +6,23 @@ export interface CalEvent {
   meetingUrl?: string;
 }
 
-/** Snapshot of the current Claude 5-hour usage block. */
+/**
+ * Official rate-limit usage, sourced from the Claude Code statusLine stdin JSON
+ * (`rate_limits.*`) via the `myx statusline` helper. Percentages are 0..100.
+ */
 export interface UsageSnapshot {
-  /** Current usage of the 5h block as a fraction 0..1, or null if unknown. */
-  pct: number | null;
-  /** Projected usage at reset if the current pace continues (0..1), or null. */
-  projectedPct: number | null;
-  /** Minutes until the current 5h block resets. */
-  resetInMinutes: number;
-  /** True when the % is an estimate (uncalibrated / "max"-relative denominator). */
-  estimated: boolean;
-  /** When projectedPct > 1, estimated minutes until the limit is hit. */
-  minutesToLimit?: number;
+  fiveHourPct: number | null;
+  fiveHourResetAt: number | null; // epoch seconds
+  sevenDayPct: number | null;
+  sevenDayResetAt: number | null; // epoch seconds
+  /** epoch ms when the cache was last written by `myx statusline`. */
+  updatedAt: number | null;
+  /** True when the cache is missing or older than the freshness window. */
+  stale: boolean;
 }
 
 /** Everything the renderer needs for one frame. */
 export interface WidgetState {
   events: CalEvent[];
   usage: UsageSnapshot;
-  /** True when data is served from a stale cache after a refresh failure. */
-  stale?: boolean;
 }
