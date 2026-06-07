@@ -46,8 +46,14 @@ export function launch(opts: { attach: boolean; fresh: boolean }): void {
     return;
   }
 
-  // Pane ids (%N) keep the layout robust to pane-base-index settings.
-  const col1 = tmuxOut(["new-session", "-d", "-s", session, "-c", cwd, "-P", "-F", "#{pane_id}"]);
+  // Build the detached session at the launching terminal's size so it barely
+  // rescales when the client attaches. Pane ids (%N) keep the layout robust to
+  // pane-base-index settings.
+  const cols = Number(process.stdout.columns) || 200;
+  const rows = Number(process.stdout.rows) || 50;
+  const col1 = tmuxOut([
+    "new-session", "-d", "-s", session, "-c", cwd, "-x", String(cols), "-y", String(rows), "-P", "-F", "#{pane_id}",
+  ]);
   for (let i = 0; i < 3; i++) tmux(["split-window", "-h", "-c", cwd]); // → four columns
   tmux(["select-layout", "-t", session, "even-horizontal"]); // equalize the column widths
   // widget pane at the bottom of the leftmost column.
@@ -58,6 +64,14 @@ export function launch(opts: { attach: boolean; fresh: boolean }): void {
   ]);
   tmux(["send-keys", "-t", widget, `${myx} widget`, "Enter"]);
   tmux(["select-pane", "-t", col1]); // focus the top-left work shell
+
+  // An absolute height doesn't survive tmux's proportional rescale when the client
+  // attaches and the window grows. Re-pin the myx pane height on attach/resize.
+  if (cfg.pane.heightLines != null) {
+    const pin = `resize-pane -t ${widget} -y ${cfg.pane.heightLines}`;
+    tmux(["set-hook", "-t", session, "client-attached", pin]);
+    tmux(["set-hook", "-t", session, "window-resized", pin]);
+  }
 
   if (opts.attach) {
     console.log("Tip: run `claude` in any work pane (e.g. the top-left). Detach with Ctrl-b d.");
