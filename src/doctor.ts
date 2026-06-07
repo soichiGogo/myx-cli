@@ -24,12 +24,18 @@ export function doctor(): void {
   }
   const m = tmuxV.match(/(\d+)\.(\d+)/);
   const tmuxOk = m ? Number(m[1]) > 3 || (Number(m[1]) === 3 && Number(m[2]) >= 4) : false;
-  line(tmuxOk, `tmux (${tmuxV || "not found"})`, tmuxOk ? "OSC8 hyperlinks OK (≥3.4)" : "need ≥3.4 for ▶Join");
+  line(
+    tmuxOk,
+    `tmux (${tmuxV || "not found"})`,
+    tmuxOk ? "layout + pane-pinning hooks OK (≥3.4)" : "need ≥3.4 for `myx launch`",
+  );
 
   // Is Claude Code's statusLine wired to myx (so official usage flows in)?
   let wired = false;
   try {
-    const s = JSON.parse(fs.readFileSync(path.join(os.homedir(), ".claude", "settings.json"), "utf8")) as {
+    const s = JSON.parse(
+      fs.readFileSync(path.join(os.homedir(), ".claude", "settings.json"), "utf8"),
+    ) as {
       statusLine?: { command?: string };
     };
     const c = s.statusLine?.command ?? "";
@@ -37,7 +43,11 @@ export function doctor(): void {
   } catch {
     /* no settings */
   }
-  line(wired, "statusLine → myx", wired ? "official 5h/7d usage enabled" : "run `myx install-statusline`");
+  line(
+    wired,
+    "statusLine → myx",
+    wired ? "official 5h/7d usage enabled" : "run `myx install-statusline`",
+  );
 
   const u = readUsage();
   const hasData = u.fiveHourPct != null;
@@ -52,6 +62,11 @@ export function doctor(): void {
   );
 
   const cfg = loadConfig();
-  line(fs.existsSync(configPath()), `config (${configPath()})`, fs.existsSync(configPath()) ? "" : "using defaults");
-  if (cfg.statuslinePassthrough) line(true, "statusLine passthrough", "your previous statusline is chained");
+  line(
+    fs.existsSync(configPath()),
+    `config (${configPath()})`,
+    fs.existsSync(configPath()) ? "" : "using defaults",
+  );
+  if (cfg.statuslinePassthrough)
+    line(true, "statusLine passthrough", "your previous statusline is chained");
 }

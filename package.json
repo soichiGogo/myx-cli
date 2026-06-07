@@ -2,7 +2,25 @@
   "name": "myx-cli",
   "version": "0.1.0",
   "private": true,
-  "description": "Ghostty/tmux bottom-left widget: Claude 5h usage % + next Google Calendar events",
+  "description": "Always-on bottom-left tmux widget showing official Claude 5h/7d usage",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "tmux",
+    "ghostty",
+    "cli",
+    "widget",
+    "usage",
+    "statusline"
+  ],
+  "homepage": "https://github.com/soichiGogo/myx-cli#readme",
+  "bugs": "https://github.com/soichiGogo/myx-cli/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soichiGogo/myx-cli.git"
+  },
+  "license": "MIT",
+  "author": "soichiGogo",
   "type": "module",
   "bin": {
     "myx": "bin/myx"
@@ -12,14 +30,20 @@
     "once": "tsx src/cli.ts widget --once",
     "launch": "tsx src/cli.ts launch",
     "doctor": "tsx src/cli.ts doctor",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "engines": {
     "node": ">=20"
   },
+  "dependencies": {
+    "tsx": "^4.19.2"
+  },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "tsx": "^4.19.2",
+    "prettier": "^3.4.2",
     "typescript": "^5.7.2"
   }
 }
