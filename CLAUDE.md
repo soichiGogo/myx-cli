@@ -4,9 +4,13 @@ Guidance for working in this repo. Keep it consistent with the locked design bel
 
 ## What this is
 
-A TypeScript/Node widget that runs in the **bottom-left tmux pane** while the user
-runs `claude` in **Ghostty**, showing **official Claude usage**: 5-hour and weekly
-rate-limit bars with reset countdowns and a projection.
+A TypeScript/Node **CLI tool** (`myx <command>`) that renders a small always-on
+widget in the **bottom-left tmux pane** while the user runs `claude` in **Ghostty**.
+
+The intent is a personal dashboard for whatever the user wants permanently visible in
+the bottom-left — **items are expected to be added over time**. Today it shows one
+thing: **official Claude usage** (5-hour and weekly rate-limit bars with reset
+countdowns and a projection). New items should slot in alongside it, not replace it.
 
 ## Locked design decisions (and why)
 
