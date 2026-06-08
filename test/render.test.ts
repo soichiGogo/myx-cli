@@ -44,8 +44,8 @@ test("vis: counts emoji as width 2", () => {
 
 test("renderFrame: two aligned bars labelled 5h and 7d", () => {
   const [line5h = "", line7d = ""] = renderFrame(snap(), { width: 40, now: 0 }).split("\n");
-  assert.match(plain(line5h), /^5h /);
-  assert.match(plain(line7d), /^7d /);
+  assert.match(plain(line5h), /^ {2}5h /);
+  assert.match(plain(line7d), /^ {2}7d /);
   const barLen = (s: string) => (plain(s).match(/[█░]/g) ?? []).length;
   assert.equal(barLen(line5h), barLen(line7d));
 });

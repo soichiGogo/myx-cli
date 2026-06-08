@@ -76,20 +76,21 @@ export function renderFrame(u: UsageSnapshot, opts: { width?: number; now?: numb
   const W = opts.width ?? termWidth();
   const now = opts.now ?? Date.now();
 
+  const indent = "  ";
   let reset5h = resetTail(u.fiveHourResetAt, now);
   let reset7d = resetTail(u.sevenDayResetAt, now);
-  // fixed cells around the bar: "5h "(3) + sp(1) + pct(<=4) + " →NNN%"(<=6) + margin(1) = 15
-  let barW = W - 15 - Math.max(vis(reset5h), vis(reset7d));
+  // fixed cells around the bar: indent(2) + "5h "(3) + sp(1) + pct(<=4) + " →NNN%"(<=6) + margin(1) = 17
+  let barW = W - 17 - Math.max(vis(reset5h), vis(reset7d));
   if (barW < 5) {
     reset5h = "";
     reset7d = "";
-    barW = W - 15;
+    barW = W - 17;
   }
   barW = Math.max(4, Math.min(12, barW));
   const stale = u.stale ? "  " + dim("⚠") : "";
 
   return [
-    usageLine("5h", u.fiveHourPct, u.projectedFiveHourPct, barW, reset5h),
-    usageLine("7d", u.sevenDayPct, u.projectedSevenDayPct, barW, reset7d + stale),
+    indent + usageLine("5h", u.fiveHourPct, u.projectedFiveHourPct, barW, reset5h),
+    indent + usageLine("7d", u.sevenDayPct, u.projectedSevenDayPct, barW, reset7d + stale),
   ].join("\n");
 }
