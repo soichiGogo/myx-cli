@@ -30,23 +30,32 @@ export function doctor(): void {
     tmuxOk ? "layout + pane-pinning hooks OK (≥3.4)" : "need ≥3.4 for `myx launch`",
   );
 
-  // Is Claude Code's statusLine wired to myx (so official usage flows in)?
-  let wired = false;
+  // Is Claude Code's statusLine wired to a myx binary that actually exists?
+  let statusCmd = "";
   try {
     const s = JSON.parse(
       fs.readFileSync(path.join(os.homedir(), ".claude", "settings.json"), "utf8"),
     ) as {
       statusLine?: { command?: string };
     };
-    const c = s.statusLine?.command ?? "";
-    wired = c.includes("myx") && c.includes("statusline");
+    statusCmd = s.statusLine?.command ?? "";
   } catch {
     /* no settings */
   }
+  const wired = statusCmd.includes("myx") && statusCmd.includes("statusline");
+  // The command is `<abs path>/bin/myx statusline`; verify that path still resolves.
+  // A moved/renamed repo leaves a dead path here, so the statusLine fails silently and
+  // the cache goes stale — checking only the command string would report a false ✓.
+  const myxPath = statusCmd.split(/\s+/).find((t) => /(^|\/)myx$/.test(t)) ?? "";
+  const pathOk = myxPath.startsWith("/") ? fs.existsSync(myxPath) : true;
   line(
-    wired,
+    wired && pathOk,
     "statusLine → myx",
-    wired ? "official 5h/7d usage enabled" : "run `myx install-statusline`",
+    !wired
+      ? "run `myx install-statusline`"
+      : pathOk
+        ? "official 5h/7d usage enabled"
+        : `command path missing (${myxPath}) — run \`myx install-statusline\``,
   );
 
   const u = readUsage();
