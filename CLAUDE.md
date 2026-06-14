@@ -61,10 +61,14 @@ a process in a split, and a real window is the only way to get full HTML fidelit
 (and the only way an app like Illustrator could ever live there, M3). claude drives
 it from the left with `myx show <file|url>`.
 
-- **`myx canvas` opens the right-hand canvas standalone** (no target, no tmux rebuild):
-  tile Ghostty left, open an empty canvas window right, reset state to `idle`. Same
-  arrangement `launch --canvas` does, but callable from an already-running session.
-  The wrapper shows the waiting hint when state is `idle` (it clears any prior iframe).
+- **`myx canvas` reshapes the current window + opens the canvas standalone** (no target,
+  no `--fresh`). It (1) collapses the **current tmux window** to the canvas left column —
+  keeps the pane it runs in (claude) as the work pane, closes the window's other panes
+  (`kill-pane -a`, session never killed), and re-adds the widget below
+  (`reshapeToCanvasWindow` in `launch.ts`); then (2) tiles Ghostty left and opens an empty
+  canvas window right, resetting state to `idle`. So a 4-column `launch` session collapses
+  to work+widget in place. Outside tmux it skips step 1. The wrapper shows the waiting hint
+  when state is `idle` (it clears any prior iframe).
 - **Live-reload without a watcher:** `myx canvas-serve` runs a tiny localhost server
   (Node `http`, no npm deps) serving a wrapper page that polls `/state`; `myx show`
   writes `~/.cache/myx/canvas/state.json` and the page swaps its `<iframe>`. The

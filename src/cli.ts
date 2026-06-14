@@ -1,5 +1,5 @@
 import { runWidget } from "./widget.ts";
-import { launch } from "./launch.ts";
+import { launch, reshapeToCanvasWindow } from "./launch.ts";
 import { doctor } from "./doctor.ts";
 import { statusline, installStatusline } from "./statusline.ts";
 import { show, openCanvas, serveCanvas } from "./canvas.ts";
@@ -46,7 +46,8 @@ async function main(): Promise<void> {
       });
       break;
     case "canvas":
-      openCanvas();
+      reshapeToCanvasWindow(); // tmux: collapse this window to work + widget
+      openCanvas(); // GUI: tile Ghostty left, empty canvas right
       break;
     case "show":
       show(positionals[1] ?? "");
