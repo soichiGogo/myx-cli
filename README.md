@@ -66,15 +66,17 @@ myx doctor          # tmux / statusLine / キャッシュ / 設定 を確認
 ## 使い方
 
 ```bash
-myx launch          # レイアウトを生成して接続（claude は好きな列で起動）
-myx launch --fresh  # 既存セッションを消して再構築（設定変更を反映するとき）
+myx launch          # 毎回フレッシュにレイアウトを生成して接続（既存セッションは消す）
 myx launch --canvas # 左1列（作業＋widget）＋右半分に GUI キャンバス（macOS、下記）
+myx canvas          # = launch --canvas（キャンバスレイアウトを作り直して接続）
 myx widget          # ウィジェット単体（ペイン内で動いているもの）
 myx doctor          # 環境チェック
 ```
 
-`myx launch --fresh` は **対象セッションの外**（新しい Ghostty タブなど）から実行してください。
-セッションの中で実行すると、再構築前に自分自身のプロセスごと kill されます。
+`myx launch` / `myx canvas` は実行のたびに**既存セッションを消して作り直します**。セッションの
+**中**から実行した場合は、旧セッションを脇に退避 → 新セッションを構築 → この Ghostty を新セッションへ
+切替 → 旧セッション（動いていた claude を含む）を kill、の順で**確実に作り直します**（同じ Ghostty に
+作りたてのセッションが出ます）。放置中の detach セッションも再実行で消える点に注意してください。
 
 ## 右側のキャンバス（`--canvas`、macOS）
 
@@ -93,19 +95,15 @@ myx doctor          # 環境チェック
 ```
 
 ```bash
-myx launch --canvas          # レイアウト生成＋ウィンドウ配置
-myx canvas                   # （既存セッションから）空のキャンバスを右半分に開く
+myx canvas                   # キャンバスレイアウトを作り直して接続（= launch --canvas）
 myx show ./report.html       # 左の claude から右へ表示（編集すると自動リロード）
 myx show https://example.com # URL もそのまま表示
 ```
 
-`myx canvas` は引数なしで、(1) **今いる tmux ウィンドウを「作業（claude）＋ widget」の2分割に
-組み替え**（claude のペインを作業ペインとして残し、そのウィンドウの他のペインは閉じます。
-セッション自体は kill しません）、(2) Ghostty を左半分にタイルして**右半分に空のキャンバス**を
-開きます（中身は claude が `myx show` で随時差し替える前提）。`launch --canvas` をしていなくても、
-4列レイアウトの作業中セッションからこれ一発でキャンバス配置に移れます。
-**tmux の外で実行したとき**は組み替える窓が無いので、`myx launch --canvas` 相当
-（セッションを作って作業＋widget＋キャンバスを構築して接続）にフォールバックします。
+`myx canvas` は `myx launch --canvas` と同じで、**毎回フレッシュにセッションを作り直して**
+（作業＋widget の左1列＋右半分の空キャンバス）接続します。既存セッションがあれば消してから
+構築します（中＝退避→構築→切替→旧 kill、外＝kill→構築→接続）。中身は claude が `myx show`
+で随時差し替える前提です。
 
 > **Ghostty を native フルスクリーン（緑ボタン）にしていると、右側に別ウィンドウを並べられません。**
 > native フルスクリーンは独立した Space を占有するため、キャンバスはデスクトップ側の Space に開いてしまいます。

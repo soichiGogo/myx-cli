@@ -14,8 +14,8 @@ const USAGE = `usage: myx <command> [options]
 
 commands:
   widget              render the status widget (default)
-  launch              build the tmux layout and attach
-  canvas              switch to the canvas layout: work+widget + GUI canvas (macOS)
+  launch              build a fresh tmux layout and attach (kills an existing one)
+  canvas              build a fresh canvas layout: work+widget + GUI canvas (macOS)
   show <file|url>     display a target on the canvas window (macOS); live-reloads
   install-statusline  point Claude Code's statusLine at myx (backs up settings)
   statusline          internal: cache official rate limits from Claude Code stdin
@@ -24,7 +24,6 @@ commands:
 options:
   --once              widget: render a single frame and exit
   --no-attach         launch: create the tmux session without attaching
-  --fresh             launch: kill an existing session first, then rebuild
   --canvas            launch: single left column + a GUI canvas on the right half (macOS)
 `;
 
@@ -41,7 +40,6 @@ async function main(): Promise<void> {
     case "launch":
       launch({
         attach: !flags.has("--no-attach"),
-        fresh: flags.has("--fresh"),
         canvas: flags.has("--canvas"),
       });
       break;

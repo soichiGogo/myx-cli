@@ -61,16 +61,17 @@ a process in a split, and a real window is the only way to get full HTML fidelit
 (and the only way an app like Illustrator could ever live there, M3). claude drives
 it from the left with `myx show <file|url>`.
 
-- **`myx canvas` reshapes the current window + opens the canvas standalone** (no target,
-  no `--fresh`). It (1) collapses the **current tmux window** to the canvas left column —
-  keeps the pane it runs in (claude) as the work pane, closes the window's other panes
-  (`kill-pane -a`, session never killed), and re-adds the widget below
-  (`reshapeToCanvasWindow` in `launch.ts`); then (2) tiles Ghostty left and opens an empty
-  canvas window right, resetting state to `idle`. So a 4-column `launch` session collapses
-  to work+widget in place. **Outside tmux** there's no window to reshape, so it falls back
-  to `launch --canvas` (build the session + work/widget column + tiled canvas, then attach).
-  Entry point is `canvasCommand` in `launch.ts`. The wrapper shows the waiting hint when
-  state is `idle` (it clears any prior iframe).
+- **`myx launch` / `myx canvas` always rebuild a fresh session** (kill any existing one
+  first — no reuse, no `--fresh` flag). `canvasCommand` just calls `launch({canvas:true})`;
+  both share `launch` in `launch.ts`. The kill has three cases (`launch`'s doc comment):
+  **outside the target session** → kill + build + attach (or `switch-client` when nested
+  in another tmux); **inside the target session** → a plain kill would kill the rebuild
+  process too, so rename the live session aside (`<session>-old`), build the fresh one,
+  `switch-client` this Ghostty to it, then kill the old as the last op (its pane — and any
+  claude in it — dies with it, as intended); **`--no-attach`** (scripted/test) → build
+  detached only, and refuse if run from inside the target. The canvas GUI (tile Ghostty
+  left, empty idle canvas right via `canvasLaunchArrange`) runs on the attach paths only.
+  The wrapper shows the waiting hint when state is `idle` (it clears any prior iframe).
 - **Live-reload without a watcher:** `myx canvas-serve` runs a tiny localhost server
   (Node `http`, no npm deps) serving a wrapper page that polls `/state`; `myx show`
   writes `~/.cache/myx/canvas/state.json` and the page swaps its `<iframe>`. The
@@ -95,7 +96,8 @@ npm run format      # Prettier write (format:check to verify only)
 ./bin/myx doctor
 ./bin/myx launch --no-attach   # build the tmux session without attaching (for tests)
 
-# NEVER `--fresh`/`kill-session` the live `myx` session — Claude runs inside it.
+# `myx launch`/`canvas` now ALWAYS rebuild (kill the session first) — by design. But for
+# Claude's own verification, NEVER kill/rebuild the live `myx` session: Claude runs inside it.
 # To inspect a fresh layout, build it under a throwaway session name (set `session`
 # in a temp config), then kill only that one. Read-only `tmux list-panes` is safe.
 

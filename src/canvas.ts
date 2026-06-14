@@ -388,35 +388,11 @@ export function show(input: string): void {
 }
 
 /**
- * `myx canvas` — open the right-hand canvas with no content, ready for the claude
- * session to drive with `myx show`. Same arrangement as `launch --canvas` (tile
- * Ghostty left, idle canvas right) but standalone, so it works from an already-running
- * session without rebuilding the tmux layout.
+ * Called by `myx launch --canvas` / `myx canvas`: tile Ghostty to the left half and
+ * open an empty (idle) canvas window on the right. State is reset to `idle` so a freshly
+ * rebuilt session starts blank even if a file was shown before; the claude session then
+ * drives it with `myx show`.
  */
-export function openCanvas(): void {
-  if (process.platform !== "darwin") {
-    console.error("myx canvas: the canvas is macOS-only (it controls a GUI window).");
-    process.exit(1);
-  }
-  const cfg = loadConfig();
-  // Reset to idle so a fresh canvas starts blank even if a file was shown before.
-  const prev = readState();
-  writeState({ version: prev.version + 1, kind: "idle", target: "" });
-  ensureServer();
-  try {
-    if (cfg.canvas.tileSelf) arrangeGhostty(cfg);
-    ensureCanvasWindow(cfg);
-  } catch {
-    console.error(
-      "myx canvas: couldn't control the windows. Grant your terminal\n" +
-        "  Automation + Accessibility access (System Settings ▸ Privacy & Security),\n" +
-        `  or open ${canvasUrl(cfg)} once manually.`,
-    );
-  }
-  console.log(`myx: canvas ready → ${canvasUrl(cfg)}  (drive it with \`myx show <file|url>\`)`);
-}
-
-/** Called by `myx launch --canvas`: tile Ghostty left, then open an idle canvas on the right. */
 export function canvasLaunchArrange(cfg: MyxConfig): void {
   if (process.platform !== "darwin") return; // best-effort, macOS only
   if (cfg.canvas.tileSelf) {
@@ -426,7 +402,8 @@ export function canvasLaunchArrange(cfg: MyxConfig): void {
       /* window control not granted yet — non-fatal, user can tile manually */
     }
   }
-  if (!fs.existsSync(statePath())) writeState({ version: 1, kind: "idle", target: "" });
+  const prev = readState();
+  writeState({ version: prev.version + 1, kind: "idle", target: "" });
   ensureServer();
   try {
     ensureCanvasWindow(cfg);

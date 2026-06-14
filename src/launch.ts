@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadConfig } from "./config.ts";
-import { canvasLaunchArrange, openCanvas } from "./canvas.ts";
+import { loadConfig, type MyxConfig } from "./config.ts";
+import { canvasLaunchArrange } from "./canvas.ts";
 
 /**
- * Build the tmux layout and (optionally) attach.
+ * Build the tmux layout and attach. `myx launch` / `myx canvas` always rebuild a
+ * fresh session (kill any existing one first) — they never reuse a stale layout.
  *
  * Default — four equal columns of shells in the launch dir; the leftmost column
  * is split so its bottom holds the myx widget:
@@ -37,108 +38,48 @@ function myxBin(): string {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "myx");
 }
 
-/**
- * Reshape the *current* tmux window into the canvas left column — keep the pane we're
- * running in (claude) as the work pane on top, drop the other panes in this window,
- * and put the myx widget back at the bottom. This is what `myx canvas` runs so an
- * already-attached session collapses into the work+widget split without `--fresh`.
- *
- * Only the panes of the current window are touched (siblings are closed); the session
- * itself is never killed — claude keeps running in its own pane.
- */
-export function reshapeToCanvasWindow(): void {
-  const cur = process.env.TMUX_PANE;
-  if (!process.env.TMUX || !cur) return; // not in tmux: caller falls back to `launch --canvas`
-  const cfg = loadConfig();
-  const cwd = process.cwd();
-  const myx = myxBin();
-  const session = TMUX_OUT(["display-message", "-p", "-t", cur, "#{session_name}"]);
-
-  // Collapse to a single work pane: close every other pane in this window. `-a`
-  // kills all panes in the window except the target (the claude pane stays).
-  const paneCount = Number(TMUX_OUT(["display-message", "-p", "-t", cur, "#{window_panes}"]));
-  if (paneCount > 1) TMUX(["kill-pane", "-a", "-t", cur]);
-
-  // Re-add the widget pane at the bottom of the (now single) column.
-  const paneSize =
-    cfg.pane.heightLines != null ? `${cfg.pane.heightLines}` : `${cfg.pane.heightPct}%`;
-  const widget = TMUX_OUT([
-    "split-window",
-    "-v",
-    "-l",
-    paneSize,
-    "-c",
-    cwd,
-    "-t",
-    cur,
-    "-P",
-    "-F",
-    "#{pane_id}",
-  ]);
-  TMUX(["send-keys", "-t", widget, `${myx} widget`, "Enter"]);
-  TMUX(["select-pane", "-t", cur]); // keep focus on the work (claude) pane
-
-  // Keep the absolute widget height pinned across attach/resize, like `launch` does.
-  if (cfg.pane.heightLines != null) {
-    const pin = `resize-pane -t ${widget} -y ${cfg.pane.heightLines}`;
-    TMUX(["set-hook", "-t", session, "client-attached", pin]);
-    TMUX(["set-hook", "-t", session, "window-resized", pin]);
+function sessionExists(name: string): boolean {
+  try {
+    execFileSync("tmux", ["has-session", "-t", name], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
   }
 }
 
-/**
- * `myx canvas` entry. Inside tmux: reshape the current window to work+widget and open
- * the GUI canvas. Outside tmux: there's no window to reshape, so build the full
- * `--canvas` layout from scratch (session + work/widget column + tiled canvas) and attach.
- */
-export function canvasCommand(): void {
-  if (process.env.TMUX && process.env.TMUX_PANE) {
-    reshapeToCanvasWindow(); // collapse this window to work + widget
-    openCanvas(); // tile Ghostty left, empty canvas right
-  } else {
-    launch({ attach: true, fresh: false, canvas: true });
+/** The tmux session this process is running inside, or null when not in tmux. */
+function currentSession(): string | null {
+  if (!process.env.TMUX) return null;
+  try {
+    return TMUX_OUT(["display-message", "-p", "#{session_name}"]);
+  } catch {
+    return null;
   }
 }
 
-export function launch(opts: { attach: boolean; fresh: boolean; canvas?: boolean }): void {
-  const cfg = loadConfig();
-  const session = cfg.session;
+function tip(canvas?: boolean): void {
+  console.log(
+    canvas
+      ? "Tip: run `claude` top-left; show it on the right with `myx show <file|url>`. Detach with Ctrl-b d."
+      : "Tip: run `claude` in any work pane (e.g. the top-left). Detach with Ctrl-b d.",
+  );
+}
+
+/**
+ * Build a fresh *detached* session `name` with the work/widget layout. The session
+ * is built at the launching terminal's size so it barely rescales when a client
+ * attaches; pane ids (%N) keep the layout robust to pane-base-index settings.
+ */
+function buildLayout(name: string, cfg: MyxConfig, canvas?: boolean): void {
   const cwd = process.cwd();
   const myx = myxBin();
-  const tmux = TMUX;
-  const tmuxOut = TMUX_OUT;
-
-  const sessionExists = (): boolean => {
-    try {
-      execFileSync("tmux", ["has-session", "-t", session], { stdio: "ignore" });
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  if (opts.fresh && sessionExists()) tmux(["kill-session", "-t", session]);
-  if (sessionExists()) {
-    // An existing session is reused as-is; rebuild with --fresh to apply layout/config changes.
-    if (opts.attach) {
-      console.log(`Attaching to existing '${session}' (use \`myx launch --fresh\` to rebuild).`);
-      tmux(["attach", "-t", session], true);
-    } else {
-      console.log(`tmux session '${session}' already exists — use \`--fresh\` to rebuild.`);
-    }
-    return;
-  }
-
-  // Build the detached session at the launching terminal's size so it barely
-  // rescales when the client attaches. Pane ids (%N) keep the layout robust to
-  // pane-base-index settings.
   const cols = Number(process.stdout.columns) || 200;
   const rows = Number(process.stdout.rows) || 50;
-  const col1 = tmuxOut([
+  const col1 = TMUX_OUT([
     "new-session",
     "-d",
     "-s",
-    session,
+    name,
     "-c",
     cwd,
     "-x",
@@ -151,15 +92,15 @@ export function launch(opts: { attach: boolean; fresh: boolean; canvas?: boolean
   ]);
   // Default layout adds three more columns; --canvas keeps a single left column
   // (the right half of the screen is a separate GUI window, not a tmux pane).
-  if (!opts.canvas) {
-    for (let i = 0; i < 3; i++) tmux(["split-window", "-h", "-c", cwd]); // → four columns
-    tmux(["select-layout", "-t", session, "even-horizontal"]); // equalize the column widths
+  if (!canvas) {
+    for (let i = 0; i < 3; i++) TMUX(["split-window", "-h", "-t", name, "-c", cwd]); // → four columns
+    TMUX(["select-layout", "-t", name, "even-horizontal"]); // equalize the column widths
   }
   // widget pane at the bottom of the leftmost column.
   // -l takes absolute rows (heightLines) or a percentage of the column.
   const paneSize =
     cfg.pane.heightLines != null ? `${cfg.pane.heightLines}` : `${cfg.pane.heightPct}%`;
-  const widget = tmuxOut([
+  const widget = TMUX_OUT([
     "split-window",
     "-v",
     "-l",
@@ -172,31 +113,78 @@ export function launch(opts: { attach: boolean; fresh: boolean; canvas?: boolean
     "-F",
     "#{pane_id}",
   ]);
-  tmux(["send-keys", "-t", widget, `${myx} widget`, "Enter"]);
-  tmux(["select-pane", "-t", col1]); // focus the top-left work shell
+  TMUX(["send-keys", "-t", widget, `${myx} widget`, "Enter"]);
+  TMUX(["select-pane", "-t", col1]); // focus the top-left work shell
 
   // An absolute height doesn't survive tmux's proportional rescale when the client
   // attaches and the window grows. Re-pin the myx pane height on attach/resize.
   if (cfg.pane.heightLines != null) {
     const pin = `resize-pane -t ${widget} -y ${cfg.pane.heightLines}`;
-    tmux(["set-hook", "-t", session, "client-attached", pin]);
-    tmux(["set-hook", "-t", session, "window-resized", pin]);
+    TMUX(["set-hook", "-t", name, "client-attached", pin]);
+    TMUX(["set-hook", "-t", name, "window-resized", pin]);
   }
+}
 
-  // Canvas layout: tile Ghostty left and open the right-hand canvas window.
-  // Done before attach (which blocks) so the windows are arranged up front.
-  // Skipped on --no-attach: that's the scripted/test build, with no client to
-  // arrange windows for.
-  if (opts.canvas && opts.attach) canvasLaunchArrange(cfg);
+/**
+ * `myx canvas` — the `--canvas` layout. Always a fresh rebuild (same as
+ * `myx launch --canvas`); see `launch` for how the in-place vs. outside cases are
+ * handled.
+ */
+export function canvasCommand(): void {
+  launch({ attach: true, canvas: true });
+}
 
-  if (opts.attach) {
-    console.log(
-      opts.canvas
-        ? "Tip: run `claude` top-left; show it on the right with `myx show <file|url>`. Detach with Ctrl-b d."
-        : "Tip: run `claude` in any work pane (e.g. the top-left). Detach with Ctrl-b d.",
-    );
-    tmux(["attach", "-t", session], true);
-  } else {
+/**
+ * Build a fresh session and attach. Any existing session of the same name is killed
+ * first — `launch` never reuses a stale layout.
+ *
+ * Three cases for the kill:
+ *  - **outside the target session** (not in tmux, or in a different session): kill
+ *    the old one and build + attach (or `switch-client` when nested in another tmux).
+ *  - **inside the target session**: a plain kill would also kill *this* process before
+ *    it could rebuild, so rename the old session aside, build the fresh one, switch the
+ *    client to it, then kill the old (last op — the now-detached pane running us dies
+ *    with it). The old session (and anything running in it, e.g. claude) is gone, as
+ *    intended; the same Ghostty ends up on the fresh session.
+ *  - **--no-attach** (scripted/test build): just (re)build detached, no window arrange.
+ */
+export function launch(opts: { attach: boolean; canvas?: boolean }): void {
+  const cfg = loadConfig();
+  const session = cfg.session;
+  const cur = currentSession();
+  const insideTarget = cur === session;
+
+  if (!opts.attach) {
+    if (insideTarget) {
+      console.error(
+        `myx: refusing to rebuild '${session}' detached from inside it ` +
+          `(that would kill this session without anything to attach to).`,
+      );
+      process.exit(1);
+    }
+    if (sessionExists(session)) TMUX(["kill-session", "-t", session]);
+    buildLayout(session, cfg, opts.canvas);
     console.log(`tmux session '${session}' created (detached).`);
+    return;
   }
+
+  if (insideTarget) {
+    const old = `${session}-old`;
+    if (sessionExists(old)) TMUX(["kill-session", "-t", old]);
+    TMUX(["rename-session", "-t", session, old]); // move the live session aside
+    buildLayout(session, cfg, opts.canvas);
+    if (opts.canvas) canvasLaunchArrange(cfg);
+    tip(opts.canvas);
+    TMUX(["switch-client", "-t", session]); // this Ghostty → the fresh session
+    TMUX(["kill-session", "-t", old]); // last: also ends the pane running us
+    return;
+  }
+
+  if (sessionExists(session)) TMUX(["kill-session", "-t", session]);
+  buildLayout(session, cfg, opts.canvas);
+  if (opts.canvas) canvasLaunchArrange(cfg);
+  tip(opts.canvas);
+  if (cur)
+    TMUX(["switch-client", "-t", session], true); // nested in another tmux: can't attach
+  else TMUX(["attach", "-t", session], true);
 }
