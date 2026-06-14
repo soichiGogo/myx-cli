@@ -163,11 +163,17 @@ export function wrapperHtml(): string {
       const s = await (await fetch("/state", { cache: "no-store" })).json();
       if (s.v !== cur) {
         cur = s.v;
+        const f = document.getElementById("f");
+        const wait = document.getElementById("wait");
         if (s.src) {
-          document.getElementById("wait").style.display = "none";
-          const f = document.getElementById("f");
+          wait.style.display = "none";
           f.style.display = "block";
           f.src = s.src;
+        } else {
+          // idle (e.g. fresh \`myx canvas\`): clear any prior content, show the hint
+          f.style.display = "none";
+          f.removeAttribute("src");
+          wait.style.display = "block";
         }
       }
     } catch (e) {}
@@ -379,6 +385,35 @@ export function show(input: string): void {
     );
   }
   console.log(`myx: canvas → ${kind === "url" ? target : path.basename(target)}`);
+}
+
+/**
+ * `myx canvas` — open the right-hand canvas with no content, ready for the claude
+ * session to drive with `myx show`. Same arrangement as `launch --canvas` (tile
+ * Ghostty left, idle canvas right) but standalone, so it works from an already-running
+ * session without rebuilding the tmux layout.
+ */
+export function openCanvas(): void {
+  if (process.platform !== "darwin") {
+    console.error("myx canvas: the canvas is macOS-only (it controls a GUI window).");
+    process.exit(1);
+  }
+  const cfg = loadConfig();
+  // Reset to idle so a fresh canvas starts blank even if a file was shown before.
+  const prev = readState();
+  writeState({ version: prev.version + 1, kind: "idle", target: "" });
+  ensureServer();
+  try {
+    if (cfg.canvas.tileSelf) arrangeGhostty(cfg);
+    ensureCanvasWindow(cfg);
+  } catch {
+    console.error(
+      "myx canvas: couldn't control the windows. Grant your terminal\n" +
+        "  Automation + Accessibility access (System Settings ▸ Privacy & Security),\n" +
+        `  or open ${canvasUrl(cfg)} once manually.`,
+    );
+  }
+  console.log(`myx: canvas ready → ${canvasUrl(cfg)}  (drive it with \`myx show <file|url>\`)`);
 }
 
 /** Called by `myx launch --canvas`: tile Ghostty left, then open an idle canvas on the right. */

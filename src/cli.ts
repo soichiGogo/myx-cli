@@ -2,7 +2,7 @@ import { runWidget } from "./widget.ts";
 import { launch } from "./launch.ts";
 import { doctor } from "./doctor.ts";
 import { statusline, installStatusline } from "./statusline.ts";
-import { show, serveCanvas } from "./canvas.ts";
+import { show, openCanvas, serveCanvas } from "./canvas.ts";
 
 // Exit quietly when a downstream pipe closes (e.g. `myx doctor | head`).
 process.stdout.on("error", (err: NodeJS.ErrnoException) => {
@@ -15,7 +15,8 @@ const USAGE = `usage: myx <command> [options]
 commands:
   widget              render the status widget (default)
   launch              build the tmux layout and attach
-  show <file|url>     display a target on the --canvas window (macOS); live-reloads
+  canvas              open an empty GUI canvas on the right half (macOS)
+  show <file|url>     display a target on the canvas window (macOS); live-reloads
   install-statusline  point Claude Code's statusLine at myx (backs up settings)
   statusline          internal: cache official rate limits from Claude Code stdin
   doctor              check environment (tmux, statusLine, config)
@@ -43,6 +44,9 @@ async function main(): Promise<void> {
         fresh: flags.has("--fresh"),
         canvas: flags.has("--canvas"),
       });
+      break;
+    case "canvas":
+      openCanvas();
       break;
     case "show":
       show(positionals[1] ?? "");

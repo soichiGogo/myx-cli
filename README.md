@@ -94,9 +94,14 @@ myx doctor          # 環境チェック
 
 ```bash
 myx launch --canvas          # レイアウト生成＋ウィンドウ配置
+myx canvas                   # （既存セッションから）空のキャンバスを右半分に開く
 myx show ./report.html       # 左の claude から右へ表示（編集すると自動リロード）
 myx show https://example.com # URL もそのまま表示
 ```
+
+`myx canvas` は引数なしで、Ghostty を左半分にタイルして**右半分に空のキャンバス**を開きます
+（中身は claude が `myx show` で随時差し替える前提）。`launch --canvas` をしていなくても、
+作業中のセッションからいつでも呼べます。
 
 > **Ghostty を native フルスクリーン（緑ボタン）にしていると、右側に別ウィンドウを並べられません。**
 > native フルスクリーンは独立した Space を占有するため、キャンバスはデスクトップ側の Space に開いてしまいます。
