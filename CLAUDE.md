@@ -66,9 +66,13 @@ it from the left with `myx show <file|url>`.
   writes `~/.cache/myx/canvas/state.json` and the page swaps its `<iframe>`. The
   served version embeds the file mtime, so **editing the shown file reloads it**.
   Sibling assets resolve (the file's dir is served under `/file/`, traversal-guarded).
-- **osascript only opens/tiles the window** (Chrome `bounds` for the canvas window,
+- **osascript only opens/tiles the windows** (Chrome `bounds` for the canvas window,
   System Events for Ghostty). Needs Automation + Accessibility consent on first use;
   degrades to a printed hint when not granted. `--no-attach` skips the window arrange.
+- **Native fullscreen owns its own Space** and can't share the screen with the canvas,
+  so when `canvas.tileSelf` (default) myx drops Ghostty out of native fullscreen
+  (`AXFullScreen`) and tiles it to the left half before placing the canvas right.
+  `myx show` does this too, so it works even when launched from a fullscreen Ghostty.
 
 ## Dev commands
 

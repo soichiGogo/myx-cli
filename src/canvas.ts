@@ -111,7 +111,12 @@ export function tileCanvasScript(url: string, rect: Rect): string {
   ].join("\n");
 }
 
-/** AppleScript: tile the frontmost window of a GUI app (e.g. Ghostty) via System Events. */
+/**
+ * AppleScript: tile the frontmost window of a GUI app (e.g. Ghostty) via System
+ * Events. A *native*-fullscreen window lives in its own Space and can't share the
+ * screen with the canvas window, so we drop out of fullscreen (AXFullScreen) first,
+ * then position/size it.
+ */
 export function ghosttyTileScript(rect: Rect, appName = "Ghostty"): string {
   const { x, y, w, h } = rect;
   return [
@@ -119,6 +124,12 @@ export function ghosttyTileScript(rect: Rect, appName = "Ghostty"): string {
     `  if exists (processes whose name is "${appName}") then`,
     `    tell process "${appName}"`,
     `      if exists front window then`,
+    `        try`,
+    `          if value of attribute "AXFullScreen" of front window is true then`,
+    `            set value of attribute "AXFullScreen" of front window to false`,
+    `            delay 1`,
+    `          end if`,
+    `        end try`,
     `        set position of front window to {${x}, ${y}}`,
     `        set size of front window to {${w}, ${h}}`,
     `      end if`,
@@ -316,6 +327,12 @@ function ensureServer(): void {
   sleepMs(150); // give a fresh server a moment to bind; harmless if already up
 }
 
+/** Drop Ghostty out of native fullscreen and tile it to the left half. */
+function arrangeGhostty(cfg: MyxConfig): void {
+  const { left } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
+  osa(ghosttyTileScript(left));
+}
+
 /** Ensure the canvas window exists and is tiled to the right half. */
 function ensureCanvasWindow(cfg: MyxConfig): void {
   const url = canvasUrl(cfg);
@@ -350,10 +367,13 @@ export function show(input: string): void {
   ensureServer();
 
   try {
+    // Tile Ghostty left (exiting native fullscreen if needed) so the two share
+    // the screen — otherwise a fullscreen Ghostty hides the canvas on its own Space.
+    if (cfg.canvas.tileSelf) arrangeGhostty(cfg);
     ensureCanvasWindow(cfg);
   } catch {
     console.error(
-      "myx show: couldn't control the browser window. Grant your terminal\n" +
+      "myx show: couldn't control the windows. Grant your terminal\n" +
         "  Automation + Accessibility access (System Settings ▸ Privacy & Security),\n" +
         `  or open ${canvasUrl(cfg)} once manually. The page live-reloads on its own.`,
     );
@@ -364,10 +384,9 @@ export function show(input: string): void {
 /** Called by `myx launch --canvas`: tile Ghostty left, then open an idle canvas on the right. */
 export function canvasLaunchArrange(cfg: MyxConfig): void {
   if (process.platform !== "darwin") return; // best-effort, macOS only
-  const { left } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
   if (cfg.canvas.tileSelf) {
     try {
-      osa(ghosttyTileScript(left));
+      arrangeGhostty(cfg);
     } catch {
       /* window control not granted yet — non-fatal, user can tile manually */
     }

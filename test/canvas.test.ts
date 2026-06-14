@@ -62,6 +62,9 @@ test("ghosttyTileScript: tiles a named app's front window via System Events", ()
   assert.match(s, /process "Ghostty"/);
   assert.match(s, /set position of front window to \{0, 25\}/);
   assert.match(s, /set size of front window to \{500, 775\}/);
+  // drops out of native fullscreen first (otherwise it owns its own Space)
+  assert.match(s, /AXFullScreen.*is true/);
+  assert.match(s, /set value of attribute "AXFullScreen" of front window to false/);
 });
 
 test("contentType: maps known extensions and falls back to octet-stream", () => {
