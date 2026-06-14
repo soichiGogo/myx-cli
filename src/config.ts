@@ -31,7 +31,10 @@ export interface MyxConfig {
 }
 
 const DEFAULTS: MyxConfig = {
-  pane: { heightPct: 24 },
+  // The widget is fixed-height content (two bars), so default to an absolute row
+  // count — a percentage of the column leaves a tall, mostly-empty pane on big
+  // screens. heightPct stays available for anyone who explicitly wants a ratio.
+  pane: { heightPct: 24, heightLines: 2 },
   session: "myx",
   canvas: { split: 0.5, port: 7842, menuBarPx: 25, tileSelf: true },
 };
@@ -53,7 +56,10 @@ export function loadConfig(): MyxConfig {
     return {
       ...DEFAULTS,
       ...j,
-      pane: { ...DEFAULTS.pane, ...(j.pane ?? {}) },
+      // When the user supplies their own pane config, respect it as given (only
+      // backfilling heightPct) — don't inject the default heightLines, so an
+      // explicit heightPct isn't silently overridden by the absolute default.
+      pane: j.pane ? { heightPct: DEFAULTS.pane.heightPct, ...j.pane } : { ...DEFAULTS.pane },
       canvas: { ...DEFAULTS.canvas, ...(j.canvas ?? {}) },
     };
   } catch {

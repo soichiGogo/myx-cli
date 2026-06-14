@@ -134,17 +134,17 @@ typecheck・テスト・整形チェックを実行します。
 
 任意。`~/.config/myx/config.json`（`config.example.json` 参照）:
 
-| キー                    | 意味                                                                   |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `pane.heightLines`      | myx ペインの高さ（絶対行数。例 `2`）。窓のリサイズでも維持される       |
-| `pane.heightPct`        | …または一番左の列に対する割合（`heightLines` 未設定時に使用）          |
-| `session`               | `myx launch` の tmux セッション名（既定 `myx`）                        |
-| `canvas.split`          | `--canvas` で Ghostty に割く画面左側の割合（既定 `0.5`）               |
-| `canvas.port`           | キャンバス用ローカルサーバのポート（既定 `7842`）                      |
-| `canvas.menuBarPx`      | タイル時にメニューバー分あける上端の余白 px（既定 `25`）               |
-| `canvas.tileSelf`       | `launch --canvas` で Ghostty 自身も左半分にタイルするか（既定 `true`） |
-| `canvas.chromePath`     | キャンバスに使う Chrome バイナリのパス上書き（任意）                   |
-| `statuslinePassthrough` | `install-statusline` が自動設定。以前の statusLine を連結するための値  |
+| キー                    | 意味                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `pane.heightLines`      | myx ペインの高さ（絶対行数。既定 `2`＝メーター実体に一致）。リサイズでも維持 |
+| `pane.heightPct`        | 割合指定したいとき用。`pane` に `heightPct` のみ書くと割合が優先される       |
+| `session`               | `myx launch` の tmux セッション名（既定 `myx`）                              |
+| `canvas.split`          | `--canvas` で Ghostty に割く画面左側の割合（既定 `0.5`）                     |
+| `canvas.port`           | キャンバス用ローカルサーバのポート（既定 `7842`）                            |
+| `canvas.menuBarPx`      | タイル時にメニューバー分あける上端の余白 px（既定 `25`）                     |
+| `canvas.tileSelf`       | `launch --canvas` で Ghostty 自身も左半分にタイルするか（既定 `true`）       |
+| `canvas.chromePath`     | キャンバスに使う Chrome バイナリのパス上書き（任意）                         |
+| `statuslinePassthrough` | `install-statusline` が自動設定。以前の statusLine を連結するための値        |
 
 ## メモ
 
