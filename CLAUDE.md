@@ -37,19 +37,38 @@ countdowns and a projection). New items should slot in alongside it, not replace
 
 ## Module map
 
-| File                | Responsibility                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| `src/cli.ts`        | arg parsing → `widget` / `launch` / `statusline` / `install-statusline` / `doctor` |
-| `src/widget.ts`     | widget render loop (`--once` for one frame)                                        |
-| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                |
-| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                        |
-| `src/launch.ts`     | build the tmux layout                                                              |
-| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`        |
-| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)          |
-| `src/config.ts`     | load `~/.config/myx/config.json` + defaults                                        |
-| `src/doctor.ts`     | environment checks                                                                 |
-| `src/types.ts`      | `UsageSnapshot`                                                                    |
-| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`)    |
+| File                | Responsibility                                                                                                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `src/cli.ts`        | arg parsing → `widget` / `launch` / `show` / `statusline` / `install-statusline` / `doctor` (+ internal `canvas-serve`) |
+| `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                             |
+| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                     |
+| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                             |
+| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = single left column + GUI canvas)                                     |
+| `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show`, GUI window tiling (macOS)                                   |
+| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                             |
+| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                               |
+| `src/config.ts`     | load `~/.config/myx/config.json` + defaults                                                                             |
+| `src/doctor.ts`     | environment checks                                                                                                      |
+| `src/types.ts`      | `UsageSnapshot`                                                                                                         |
+| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers)                         |
+
+## Canvas layout (`--canvas`, macOS)
+
+A second `launch` layout for showing things on the right. The left tmux column is
+work (claude) above / usage widget below; the **right half of the screen is a real
+GUI window** (a Chrome `--app` window), not a tmux pane — Ghostty has no API to put
+a process in a split, and a real window is the only way to get full HTML fidelity
+(and the only way an app like Illustrator could ever live there, M3). claude drives
+it from the left with `myx show <file|url>`.
+
+- **Live-reload without a watcher:** `myx canvas-serve` runs a tiny localhost server
+  (Node `http`, no npm deps) serving a wrapper page that polls `/state`; `myx show`
+  writes `~/.cache/myx/canvas/state.json` and the page swaps its `<iframe>`. The
+  served version embeds the file mtime, so **editing the shown file reloads it**.
+  Sibling assets resolve (the file's dir is served under `/file/`, traversal-guarded).
+- **osascript only opens/tiles the window** (Chrome `bounds` for the canvas window,
+  System Events for Ghostty). Needs Automation + Accessibility consent on first use;
+  degrades to a printed hint when not granted. `--no-attach` skips the window arrange.
 
 ## Dev commands
 
@@ -61,6 +80,10 @@ npm test            # node:test unit tests (run through tsx)
 npm run format      # Prettier write (format:check to verify only)
 ./bin/myx doctor
 ./bin/myx launch --no-attach   # build the tmux session without attaching (for tests)
+
+# NEVER `--fresh`/`kill-session` the live `myx` session — Claude runs inside it.
+# To inspect a fresh layout, build it under a throwaway session name (set `session`
+# in a temp config), then kill only that one. Read-only `tmux list-panes` is safe.
 
 # feed a fake statusline payload (the cache is normally written by Claude Code):
 echo '{"rate_limits":{"five_hour":{"used_percentage":68,"resets_at":0}}}' | ./bin/myx statusline

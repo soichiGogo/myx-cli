@@ -2,18 +2,33 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.ts";
+import { canvasLaunchArrange } from "./canvas.ts";
 
 /**
- * Build the tmux layout and (optionally) attach:
+ * Build the tmux layout and (optionally) attach.
+ *
+ * Default — four equal columns of shells in the launch dir; the leftmost column
+ * is split so its bottom holds the myx widget:
  *
  *   ┌────┬────┬────┬────┐
- *   │work│    │    │    │   four equal columns of shells in the launch dir;
- *   │    │work│work│work│   the leftmost column is split so its bottom holds
- *   ├────┤    │    │    │   the myx widget.
+ *   │work│    │    │    │
+ *   │    │work│work│work│
+ *   ├────┤    │    │    │
  *   │myx │    │    │    │
  *   └────┴────┴────┴────┘
+ *
+ * `--canvas` (macOS) — a single left column (work above, myx widget below); the
+ * right half of the screen is a real GUI window that `myx show` drives:
+ *
+ *   ┌────────┐  ┌──────────────┐
+ *   │ work   │  │              │
+ *   │(claude)│  │  canvas      │  ← real browser / app window,
+ *   ├────────┤  │ (myx show …) │    tiled to the right half
+ *   │ myx    │  │              │
+ *   └────────┘  └──────────────┘
+ *     Ghostty       separate GUI window
  */
-export function launch(opts: { attach: boolean; fresh: boolean }): void {
+export function launch(opts: { attach: boolean; fresh: boolean; canvas?: boolean }): void {
   const cfg = loadConfig();
   const session = cfg.session;
   const cwd = process.cwd();
@@ -66,8 +81,12 @@ export function launch(opts: { attach: boolean; fresh: boolean }): void {
     "-F",
     "#{pane_id}",
   ]);
-  for (let i = 0; i < 3; i++) tmux(["split-window", "-h", "-c", cwd]); // → four columns
-  tmux(["select-layout", "-t", session, "even-horizontal"]); // equalize the column widths
+  // Default layout adds three more columns; --canvas keeps a single left column
+  // (the right half of the screen is a separate GUI window, not a tmux pane).
+  if (!opts.canvas) {
+    for (let i = 0; i < 3; i++) tmux(["split-window", "-h", "-c", cwd]); // → four columns
+    tmux(["select-layout", "-t", session, "even-horizontal"]); // equalize the column widths
+  }
   // widget pane at the bottom of the leftmost column.
   // -l takes absolute rows (heightLines) or a percentage of the column.
   const paneSize =
@@ -96,8 +115,18 @@ export function launch(opts: { attach: boolean; fresh: boolean }): void {
     tmux(["set-hook", "-t", session, "window-resized", pin]);
   }
 
+  // Canvas layout: tile Ghostty left and open the right-hand canvas window.
+  // Done before attach (which blocks) so the windows are arranged up front.
+  // Skipped on --no-attach: that's the scripted/test build, with no client to
+  // arrange windows for.
+  if (opts.canvas && opts.attach) canvasLaunchArrange(cfg);
+
   if (opts.attach) {
-    console.log("Tip: run `claude` in any work pane (e.g. the top-left). Detach with Ctrl-b d.");
+    console.log(
+      opts.canvas
+        ? "Tip: run `claude` top-left; show it on the right with `myx show <file|url>`. Detach with Ctrl-b d."
+        : "Tip: run `claude` in any work pane (e.g. the top-left). Detach with Ctrl-b d.",
+    );
     tmux(["attach", "-t", session], true);
   } else {
     console.log(`tmux session '${session}' created (detached).`);

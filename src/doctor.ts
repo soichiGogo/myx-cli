@@ -78,4 +78,20 @@ export function doctor(): void {
   );
   if (cfg.statuslinePassthrough)
     line(true, "statusLine passthrough", "your previous statusline is chained");
+
+  // Canvas layout (`launch --canvas` / `myx show`) drives a Chrome app window — macOS only.
+  if (process.platform === "darwin") {
+    const chrome =
+      cfg.canvas.chromePath ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+    const chromeOk = fs.existsSync(chrome);
+    line(
+      chromeOk,
+      "canvas browser (Chrome)",
+      chromeOk
+        ? "`myx launch --canvas` + `myx show` ready (grant Automation/Accessibility on first use)"
+        : "Chrome not found — install it or set canvas.chromePath",
+    );
+  } else {
+    line(false, "canvas (--canvas)", "macOS only — needs GUI window control");
+  }
 }

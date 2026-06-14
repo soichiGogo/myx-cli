@@ -68,12 +68,41 @@ myx doctor          # tmux / statusLine / キャッシュ / 設定 を確認
 ```bash
 myx launch          # レイアウトを生成して接続（claude は好きな列で起動）
 myx launch --fresh  # 既存セッションを消して再構築（設定変更を反映するとき）
+myx launch --canvas # 左1列（作業＋widget）＋右半分に GUI キャンバス（macOS、下記）
 myx widget          # ウィジェット単体（ペイン内で動いているもの）
 myx doctor          # 環境チェック
 ```
 
 `myx launch --fresh` は **対象セッションの外**（新しい Ghostty タブなど）から実行してください。
 セッションの中で実行すると、再構築前に自分自身のプロセスごと kill されます。
+
+## 右側のキャンバス（`--canvas`、macOS）
+
+「左で claude を動かし、その成果（HTML など）を**右側の本物のウィンドウ**に映す」ためのレイアウトです。
+左の tmux 列は **上＝作業（claude）／下＝使用量ウィジェット**。右半分は tmux ペインではなく、
+タイル配置した**実ブラウザ（Chrome `--app`）ウィンドウ**です（実 GUI なので将来 Illustrator なども載せられる）。
+
+```
+┌────────┐  ┌──────────────┐
+│ work   │  │              │
+│(claude)│  │   canvas     │  ← 実ブラウザ／アプリのウィンドウ
+├────────┤  │ (myx show …) │     （画面の右半分にタイル）
+│ myx    │  │              │
+└────────┘  └──────────────┘
+  Ghostty       別 GUI ウィンドウ
+```
+
+```bash
+myx launch --canvas          # レイアウト生成＋ウィンドウ配置
+myx show ./report.html       # 左の claude から右へ表示（編集すると自動リロード）
+myx show https://example.com # URL もそのまま表示
+```
+
+仕組み: `myx show` は表示対象を `~/.cache/myx/canvas/state.json` に書き、ローカルの小さなサーバ
+（`myx canvas-serve`、Node 標準の http のみ・追加依存なし）が配信するラッパーページが状態を
+ポーリングして `<iframe>` を差し替えます。**監視フラグ不要で、表示中ファイルを編集すると自動で再読込**
+されます。ウィンドウを開いて右半分へ配置する部分だけ osascript を使うため、初回に
+**オートメーション＋アクセシビリティ**の許可を求められます（未許可なら手順を表示して継続）。
 
 ## 開発
 
@@ -92,12 +121,17 @@ typecheck・テスト・整形チェックを実行します。
 
 任意。`~/.config/myx/config.json`（`config.example.json` 参照）:
 
-| キー                    | 意味                                                                  |
-| ----------------------- | --------------------------------------------------------------------- |
-| `pane.heightLines`      | myx ペインの高さ（絶対行数。例 `2`）。窓のリサイズでも維持される      |
-| `pane.heightPct`        | …または一番左の列に対する割合（`heightLines` 未設定時に使用）         |
-| `session`               | `myx launch` の tmux セッション名（既定 `myx`）                       |
-| `statuslinePassthrough` | `install-statusline` が自動設定。以前の statusLine を連結するための値 |
+| キー                    | 意味                                                                   |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `pane.heightLines`      | myx ペインの高さ（絶対行数。例 `2`）。窓のリサイズでも維持される       |
+| `pane.heightPct`        | …または一番左の列に対する割合（`heightLines` 未設定時に使用）          |
+| `session`               | `myx launch` の tmux セッション名（既定 `myx`）                        |
+| `canvas.split`          | `--canvas` で Ghostty に割く画面左側の割合（既定 `0.5`）               |
+| `canvas.port`           | キャンバス用ローカルサーバのポート（既定 `7842`）                      |
+| `canvas.menuBarPx`      | タイル時にメニューバー分あける上端の余白 px（既定 `25`）               |
+| `canvas.tileSelf`       | `launch --canvas` で Ghostty 自身も左半分にタイルするか（既定 `true`） |
+| `canvas.chromePath`     | キャンバスに使う Chrome バイナリのパス上書き（任意）                   |
+| `statuslinePassthrough` | `install-statusline` が自動設定。以前の statusLine を連結するための値  |
 
 ## メモ
 

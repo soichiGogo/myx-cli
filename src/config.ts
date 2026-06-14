@@ -10,6 +10,22 @@ export interface MyxConfig {
   pane: { heightPct: number; heightLines?: number };
   /** tmux session name used by `myx launch`. */
   session: string;
+  /**
+   * The `--canvas` layout (B): a real GUI window tiled to the right half that
+   * `myx show` drives. macOS only.
+   */
+  canvas: {
+    /** left-hand fraction of the screen given to Ghostty (the rest is the canvas) */
+    split: number;
+    /** port for the localhost canvas server */
+    port: number;
+    /** top margin (px) left for the menu bar when tiling */
+    menuBarPx: number;
+    /** also tile Ghostty itself to the left half on `launch --canvas` */
+    tileSelf: boolean;
+    /** override the Chrome binary used for the canvas window */
+    chromePath?: string;
+  };
   /** Existing statusLine command to chain after caching rate limits. */
   statuslinePassthrough?: string;
 }
@@ -17,6 +33,7 @@ export interface MyxConfig {
 const DEFAULTS: MyxConfig = {
   pane: { heightPct: 24 },
   session: "myx",
+  canvas: { split: 0.5, port: 7842, menuBarPx: 25, tileSelf: true },
 };
 
 export function configPath(): string {
@@ -33,7 +50,12 @@ export function loadConfig(): MyxConfig {
   try {
     const raw = fs.readFileSync(configPath(), "utf8");
     const j = JSON.parse(raw) as Partial<MyxConfig>;
-    return { ...DEFAULTS, ...j, pane: { ...DEFAULTS.pane, ...(j.pane ?? {}) } };
+    return {
+      ...DEFAULTS,
+      ...j,
+      pane: { ...DEFAULTS.pane, ...(j.pane ?? {}) },
+      canvas: { ...DEFAULTS.canvas, ...(j.canvas ?? {}) },
+    };
   } catch {
     return DEFAULTS;
   }
