@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.ts";
-import { canvasLaunchArrange } from "./canvas.ts";
+import { canvasLaunchArrange, openCanvas } from "./canvas.ts";
 
 /**
  * Build the tmux layout and (optionally) attach.
@@ -48,13 +48,7 @@ function myxBin(): string {
  */
 export function reshapeToCanvasWindow(): void {
   const cur = process.env.TMUX_PANE;
-  if (!process.env.TMUX || !cur) {
-    console.log(
-      "myx canvas: not inside tmux — skipping the work+widget split " +
-        "(use `myx launch --canvas` for the full layout).",
-    );
-    return;
-  }
+  if (!process.env.TMUX || !cur) return; // not in tmux: caller falls back to `launch --canvas`
   const cfg = loadConfig();
   const cwd = process.cwd();
   const myx = myxBin();
@@ -89,6 +83,20 @@ export function reshapeToCanvasWindow(): void {
     const pin = `resize-pane -t ${widget} -y ${cfg.pane.heightLines}`;
     TMUX(["set-hook", "-t", session, "client-attached", pin]);
     TMUX(["set-hook", "-t", session, "window-resized", pin]);
+  }
+}
+
+/**
+ * `myx canvas` entry. Inside tmux: reshape the current window to work+widget and open
+ * the GUI canvas. Outside tmux: there's no window to reshape, so build the full
+ * `--canvas` layout from scratch (session + work/widget column + tiled canvas) and attach.
+ */
+export function canvasCommand(): void {
+  if (process.env.TMUX && process.env.TMUX_PANE) {
+    reshapeToCanvasWindow(); // collapse this window to work + widget
+    openCanvas(); // tile Ghostty left, empty canvas right
+  } else {
+    launch({ attach: true, fresh: false, canvas: true });
   }
 }
 

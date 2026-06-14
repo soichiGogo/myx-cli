@@ -67,8 +67,10 @@ it from the left with `myx show <file|url>`.
   (`kill-pane -a`, session never killed), and re-adds the widget below
   (`reshapeToCanvasWindow` in `launch.ts`); then (2) tiles Ghostty left and opens an empty
   canvas window right, resetting state to `idle`. So a 4-column `launch` session collapses
-  to work+widget in place. Outside tmux it skips step 1. The wrapper shows the waiting hint
-  when state is `idle` (it clears any prior iframe).
+  to work+widget in place. **Outside tmux** there's no window to reshape, so it falls back
+  to `launch --canvas` (build the session + work/widget column + tiled canvas, then attach).
+  Entry point is `canvasCommand` in `launch.ts`. The wrapper shows the waiting hint when
+  state is `idle` (it clears any prior iframe).
 - **Live-reload without a watcher:** `myx canvas-serve` runs a tiny localhost server
   (Node `http`, no npm deps) serving a wrapper page that polls `/state`; `myx show`
   writes `~/.cache/myx/canvas/state.json` and the page swaps its `<iframe>`. The
