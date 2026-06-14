@@ -96,15 +96,18 @@ function buildLayout(name: string, cfg: MyxConfig, canvas?: boolean): void {
     for (let i = 0; i < 3; i++) TMUX(["split-window", "-h", "-t", name, "-c", cwd]); // → four columns
     TMUX(["select-layout", "-t", name, "even-horizontal"]); // equalize the column widths
   }
-  // widget pane at the bottom of the leftmost column.
-  // -l takes absolute rows (heightLines) or a percentage of the column.
-  const paneSize =
-    cfg.pane.heightLines != null ? `${cfg.pane.heightLines}` : `${cfg.pane.heightPct}%`;
+  // widget pane at the bottom of the leftmost column, sized in absolute rows.
+  // The widget is fixed-height content, so resolve a percentage to lines up front:
+  // a percentage-built pane does NOT survive tmux's lossy proportional rescale when
+  // the client attaches at a different size than the build (it can collapse to 1–2
+  // rows — exactly what happens in --canvas, where Ghostty is tiled/un-fullscreened
+  // between build and attach). Absolute rows + a re-pin hook keep it stable.
+  const lines = cfg.pane.heightLines ?? Math.max(2, Math.round((cfg.pane.heightPct / 100) * rows));
   const widget = TMUX_OUT([
     "split-window",
     "-v",
     "-l",
-    paneSize,
+    String(lines),
     "-c",
     cwd,
     "-t",
@@ -116,13 +119,11 @@ function buildLayout(name: string, cfg: MyxConfig, canvas?: boolean): void {
   TMUX(["send-keys", "-t", widget, `${myx} widget`, "Enter"]);
   TMUX(["select-pane", "-t", col1]); // focus the top-left work shell
 
-  // An absolute height doesn't survive tmux's proportional rescale when the client
-  // attaches and the window grows. Re-pin the myx pane height on attach/resize.
-  if (cfg.pane.heightLines != null) {
-    const pin = `resize-pane -t ${widget} -y ${cfg.pane.heightLines}`;
-    TMUX(["set-hook", "-t", name, "client-attached", pin]);
-    TMUX(["set-hook", "-t", name, "window-resized", pin]);
-  }
+  // Re-pin the widget height whenever a client attaches or the window is resized,
+  // so tmux's proportional rescale can't squeeze it down to a sliver.
+  const pin = `resize-pane -t ${widget} -y ${lines}`;
+  TMUX(["set-hook", "-t", name, "client-attached", pin]);
+  TMUX(["set-hook", "-t", name, "window-resized", pin]);
 }
 
 /**
