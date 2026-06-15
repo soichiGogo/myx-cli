@@ -2,15 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { loadConfig, updateConfig, usageCachePath } from "./config.ts";
+import { loadConfig, myxBin, updateConfig, usageCachePath } from "./config.ts";
 
 function settingsPath(): string {
   return path.join(os.homedir(), ".claude", "settings.json");
-}
-
-function myxBin(): string {
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "myx");
 }
 
 /** Atomically write the rate-limit snapshot extracted from a statusLine payload. */
