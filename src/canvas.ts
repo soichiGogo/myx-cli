@@ -369,9 +369,9 @@ function ensureServer(): void {
  * the resulting width and treat "still near full-width" as a failure so the caller can
  * surface a hint instead of leaving the user with an unexplained full-screen Ghostty.
  */
-function arrangeGhostty(cfg: MyxConfig): void {
-  const { left } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
+function arrangeGhostty(left: Rect): void {
   const gotW = Number(osa(ghosttyTileScript(left)));
+  // 80px slack: a readback still near full-width means macOS ignored the resize.
   if (Number.isFinite(gotW) && gotW > left.w + 80) throw new Error("ghostty-tile-ignored");
 }
 
@@ -387,11 +387,11 @@ function windowControlHint(cfg: MyxConfig): string {
 }
 
 /** Ensure the canvas window exists and is tiled to the right half. */
-function ensureCanvasWindow(cfg: MyxConfig): void {
+function ensureCanvasWindow(cfg: MyxConfig, right: Rect): void {
   const url = canvasUrl(cfg);
-  const { right } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
   if (osa(tileCanvasScript(url, right)) === "true") return; // already open → tiled + raised
   spawn(chromeBin(cfg), [`--app=${url}`], { detached: true, stdio: "ignore" }).unref();
+  // wait up to ~4s (40 × 100ms) for the new --app window to appear, then tile it.
   for (let i = 0; i < 40; i++) {
     sleepMs(100);
     if (osa(tileCanvasScript(url, right)) === "true") return;
@@ -422,8 +422,9 @@ export function show(input: string): void {
   try {
     // Tile Ghostty left (exiting native fullscreen if needed) so the two share
     // the screen — otherwise a fullscreen Ghostty hides the canvas on its own Space.
-    if (cfg.canvas.tileSelf) arrangeGhostty(cfg);
-    ensureCanvasWindow(cfg);
+    const { left, right } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
+    if (cfg.canvas.tileSelf) arrangeGhostty(left);
+    ensureCanvasWindow(cfg, right);
   } catch {
     console.error(windowControlHint(cfg));
   }
@@ -438,10 +439,11 @@ export function show(input: string): void {
  */
 export function canvasLaunchArrange(cfg: MyxConfig): void {
   if (process.platform !== "darwin") return; // best-effort, macOS only
+  const { left, right } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
   let ok = true;
   if (cfg.canvas.tileSelf) {
     try {
-      arrangeGhostty(cfg);
+      arrangeGhostty(left);
     } catch {
       ok = false; // control not granted, or macOS ignored the resize — hint below
     }
@@ -450,7 +452,7 @@ export function canvasLaunchArrange(cfg: MyxConfig): void {
   writeState({ version: prev.version + 1, kind: "idle", target: "" });
   ensureServer();
   try {
-    ensureCanvasWindow(cfg);
+    ensureCanvasWindow(cfg, right);
   } catch {
     ok = false; // the window can still be opened later by `myx show`
   }
