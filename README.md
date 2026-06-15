@@ -67,7 +67,7 @@ myx doctor          # tmux / statusLine / キャッシュ / 設定 を確認
 
 ```bash
 myx launch          # 毎回フレッシュにレイアウトを生成して接続（既存セッションは消す）
-myx launch --canvas # 左1列（作業＋widget）＋右半分に GUI キャンバス（macOS、下記）
+myx launch --canvas # 左半分（作業2列＋widget）＋右半分に GUI キャンバス（macOS、下記）
 myx canvas          # = launch --canvas（キャンバスレイアウトを作り直して接続）
 myx widget          # ウィジェット単体（ペイン内で動いているもの）
 myx doctor          # 環境チェック
@@ -81,17 +81,18 @@ myx doctor          # 環境チェック
 ## 右側のキャンバス（`--canvas`、macOS）
 
 「左で claude を動かし、その成果（HTML など）を**右側の本物のウィンドウ**に映す」ためのレイアウトです。
-左の tmux 列は **上＝作業（claude）／下＝使用量ウィジェット**。右半分は tmux ペインではなく、
-タイル配置した**実ブラウザ（Chrome `--app`）ウィンドウ**です（実 GUI なので将来 Illustrator なども載せられる）。
+左半分の tmux は **作業カラム ×2（既定）＋ 左端カラムの下に使用量ウィジェット**（列数は `canvas.cols`）。
+右半分は tmux ペインではなく、タイル配置した**実ブラウザ（Chrome `--app`）ウィンドウ**です（実 GUI なので
+将来 Illustrator なども載せられる）。
 
 ```
-┌────────┐  ┌──────────────┐
-│ work   │  │              │
-│(claude)│  │   canvas     │  ← 実ブラウザ／アプリのウィンドウ
-├────────┤  │ (myx show …) │     （画面の右半分にタイル）
-│ myx    │  │              │
-└────────┘  └──────────────┘
-  Ghostty       別 GUI ウィンドウ
+┌─────┬─────┐  ┌──────────────┐
+│work │work │  │              │
+│(cc) │(cc) │  │   canvas     │  ← 実ブラウザ／アプリのウィンドウ
+├─────┤     │  │ (myx show …) │     （画面の右半分にタイル）
+│ myx │     │  │              │
+└─────┴─────┘  └──────────────┘
+   Ghostty        別 GUI ウィンドウ
 ```
 
 ```bash
@@ -101,7 +102,7 @@ myx show https://example.com # URL もそのまま表示
 ```
 
 `myx canvas` は `myx launch --canvas` と同じで、**毎回フレッシュにセッションを作り直して**
-（作業＋widget の左1列＋右半分の空キャンバス）接続します。既存セッションがあれば消してから
+（作業2列＋widget の左半分＋右半分の空キャンバス）接続します。既存セッションがあれば消してから
 構築します（中＝退避→構築→切替→旧 kill、外＝kill→構築→接続）。中身は claude が `myx show`
 で随時差し替える前提です。
 
@@ -140,6 +141,7 @@ typecheck・テスト・整形チェックを実行します。
 | `pane.heightPct`        | 割合指定したいとき用。`pane` に `heightPct` のみ書くと割合が優先される       |
 | `session`               | `myx launch` の tmux セッション名（既定 `myx`）                              |
 | `canvas.split`          | `--canvas` で Ghostty に割く画面左側の割合（既定 `0.5`）                     |
+| `canvas.cols`           | `--canvas` の左半分の作業カラム数（既定 `2`）。widget は左端カラムの下       |
 | `canvas.port`           | キャンバス用ローカルサーバのポート（既定 `7842`）                            |
 | `canvas.menuBarPx`      | タイル時にメニューバー分あける上端の余白 px（既定 `25`）                     |
 | `canvas.tileSelf`       | `launch --canvas` で Ghostty 自身も左半分にタイルするか（既定 `true`）       |

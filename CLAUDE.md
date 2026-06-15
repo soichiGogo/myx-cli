@@ -43,7 +43,7 @@ countdowns and a projection). New items should slot in alongside it, not replace
 | `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                                        |
 | `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                                |
 | `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                                        |
-| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = single left column + GUI canvas)                                                |
+| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = left half is `canvas.cols` work cols + GUI canvas)                              |
 | `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show`, GUI window tiling (macOS)                                              |
 | `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                        |
 | `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                          |
@@ -54,8 +54,9 @@ countdowns and a projection). New items should slot in alongside it, not replace
 
 ## Canvas layout (`--canvas`, macOS)
 
-A second `launch` layout for showing things on the right. The left tmux column is
-work (claude) above / usage widget below; the **right half of the screen is a real
+A second `launch` layout for showing things on the right. The left half of the screen
+is tmux: `canvas.cols` work columns (default 2) with the usage widget pinned to the
+bottom of the leftmost column; the **right half of the screen is a real
 GUI window** (a Chrome `--app` window), not a tmux pane — Ghostty has no API to put
 a process in a split, and a real window is the only way to get full HTML fidelity
 (and the only way an app like Illustrator could ever live there, M3). claude drives

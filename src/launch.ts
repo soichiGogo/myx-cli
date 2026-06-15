@@ -18,16 +18,17 @@ import { canvasLaunchArrange } from "./canvas.ts";
  *   │myx │    │    │    │
  *   └────┴────┴────┴────┘
  *
- * `--canvas` (macOS) — a single left column (work above, myx widget below); the
- * right half of the screen is a real GUI window that `myx show` drives:
+ * `--canvas` (macOS) — the left half of the screen is tmux: `canvas.cols` work columns
+ * (default 2) with the myx widget at the bottom of the leftmost one; the right half is a
+ * real GUI window that `myx show` drives:
  *
- *   ┌────────┐  ┌──────────────┐
- *   │ work   │  │              │
- *   │(claude)│  │  canvas      │  ← real browser / app window,
- *   ├────────┤  │ (myx show …) │    tiled to the right half
- *   │ myx    │  │              │
- *   └────────┘  └──────────────┘
- *     Ghostty       separate GUI window
+ *   ┌─────┬─────┐  ┌──────────────┐
+ *   │work │work │  │              │
+ *   │(cc) │(cc) │  │  canvas      │  ← real browser / app window,
+ *   ├─────┤     │  │ (myx show …) │    tiled to the right half
+ *   │ myx │     │  │              │
+ *   └─────┴─────┘  └──────────────┘
+ *      Ghostty        separate GUI window
  */
 const TMUX = (args: string[], inherit = false): void => {
   execFileSync("tmux", args, inherit ? { stdio: "inherit" } : { encoding: "utf8" });
@@ -90,12 +91,13 @@ function buildLayout(name: string, cfg: MyxConfig, canvas?: boolean): void {
     "-F",
     "#{pane_id}",
   ]);
-  // Default layout adds three more columns; --canvas keeps a single left column
-  // (the right half of the screen is a separate GUI window, not a tmux pane).
-  if (!canvas) {
-    for (let i = 0; i < 3; i++) TMUX(["split-window", "-h", "-t", name, "-c", cwd]); // → four columns
-    TMUX(["select-layout", "-t", name, "even-horizontal"]); // equalize the column widths
-  }
+  // Column count: default layout is four equal columns; --canvas fills only the left
+  // half of the screen (the right half is a separate GUI window, not a tmux pane), so
+  // it uses `canvas.cols` work columns there (default 2). The widget always lands at
+  // the bottom of the leftmost column below.
+  const ncols = canvas ? Math.max(1, cfg.canvas.cols) : 4;
+  for (let i = 0; i < ncols - 1; i++) TMUX(["split-window", "-h", "-t", name, "-c", cwd]);
+  if (ncols > 1) TMUX(["select-layout", "-t", name, "even-horizontal"]); // equalize the column widths
   // widget pane at the bottom of the leftmost column, sized in absolute rows.
   // The widget is fixed-height content, so resolve a percentage to lines up front:
   // a percentage-built pane does NOT survive tmux's lossy proportional rescale when

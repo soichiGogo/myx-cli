@@ -17,6 +17,12 @@ export interface MyxConfig {
   canvas: {
     /** left-hand fraction of the screen given to Ghostty (the rest is the canvas) */
     split: number;
+    /**
+     * Number of work columns in the left (tmux) half. The myx widget always sits at
+     * the bottom of the leftmost column; the remaining columns are full-height work.
+     * 1 = a single work column (work above / widget below).
+     */
+    cols: number;
     /** port for the localhost canvas server */
     port: number;
     /** top margin (px) left for the menu bar when tiling */
@@ -36,7 +42,7 @@ const DEFAULTS: MyxConfig = {
   // screens. heightPct stays available for anyone who explicitly wants a ratio.
   pane: { heightPct: 24, heightLines: 2 },
   session: "myx",
-  canvas: { split: 0.5, port: 7842, menuBarPx: 25, tileSelf: true },
+  canvas: { split: 0.5, cols: 2, port: 7842, menuBarPx: 25, tileSelf: true },
 };
 
 export function configPath(): string {
