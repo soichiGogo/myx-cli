@@ -6,6 +6,7 @@ import {
   ghosttyTileScript,
   halves,
   resolveTarget,
+  resolveUnderRoot,
   tileCanvasScript,
   wrapperHtml,
 } from "../src/canvas.ts";
@@ -79,4 +80,29 @@ test("wrapperHtml: polls /state and drives an iframe", () => {
   assert.match(html, /fetch\("\/state"/);
   assert.match(html, /<iframe id="f"/);
   assert.match(html, /myx show/); // the idle hint
+});
+
+test("resolveUnderRoot: sibling and nested assets resolve under the shown file's dir", () => {
+  assert.equal(resolveUnderRoot("/work", "chart.png"), path.resolve("/work", "chart.png"));
+  assert.equal(
+    resolveUnderRoot("/work", "assets/app.css"),
+    path.resolve("/work", "assets/app.css"),
+  );
+});
+
+test("resolveUnderRoot: the root dir itself is allowed", () => {
+  assert.equal(resolveUnderRoot("/work", "."), "/work");
+});
+
+test("resolveUnderRoot: a ../ traversal escaping root is rejected", () => {
+  assert.equal(resolveUnderRoot("/work", "../etc/passwd"), null);
+});
+
+test("resolveUnderRoot: an absolute path escaping root is rejected", () => {
+  assert.equal(resolveUnderRoot("/work", "/etc/passwd"), null);
+});
+
+test("resolveUnderRoot: a sibling dir sharing root's name prefix is not treated as inside", () => {
+  // "/work-secret" starts with "/work" textually but is not under "/work/"
+  assert.equal(resolveUnderRoot("/work", "../work-secret/x"), null);
 });

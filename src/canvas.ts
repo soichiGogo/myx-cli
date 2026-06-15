@@ -238,6 +238,17 @@ export function contentType(p: string): string {
   return MIME[path.extname(p).toLowerCase()] ?? "application/octet-stream";
 }
 
+/**
+ * Resolve a `/file/` request path `rel` under `root` (the shown file's directory),
+ * or null if it escapes — the path-traversal guard. `..` segments and absolute paths
+ * that climb out of `root` are rejected; `root` itself and its descendants pass.
+ */
+export function resolveUnderRoot(root: string, rel: string): string | null {
+  const abs = path.resolve(root, rel);
+  if (abs !== root && !abs.startsWith(root + path.sep)) return null;
+  return abs;
+}
+
 // ── state file (written by `show`, read by the server) ───────────────────────
 
 function readState(): CanvasState {
@@ -304,9 +315,8 @@ export function serveCanvas(): void {
         return;
       }
       const root = path.dirname(st.target);
-      const rel = decodeURIComponent(u.pathname.slice("/file/".length));
-      const abs = path.resolve(root, rel);
-      if (abs !== root && !abs.startsWith(root + path.sep)) {
+      const abs = resolveUnderRoot(root, decodeURIComponent(u.pathname.slice("/file/".length)));
+      if (abs === null) {
         res.writeHead(403);
         res.end();
         return;
@@ -347,6 +357,8 @@ function osa(script: string): string {
 function screenSize(): { w: number; h: number } {
   try {
     const out = osa(`tell application "Finder" to get bounds of window of desktop`);
+    // Finder's desktop bounds are {left, top, right, bottom}; myx tiles the main
+    // display, which sits at origin (0,0), so right/bottom are its width/height.
     const [, , w, h] = out.split(",").map((s) => parseInt(s.trim(), 10));
     if (w != null && h != null && w > 0 && h > 0) return { w, h };
   } catch {
