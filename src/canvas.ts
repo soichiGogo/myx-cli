@@ -147,16 +147,44 @@ export function wrapperHtml(): string {
 <html>
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>myx canvas</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #111; }
+  :root { --accent: #ff8a5b; --bg0: #10151f; --bg1: #1b2433; --muted: #8b95a4; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  /* A distinctly-coloured panel with an accent ring framing the viewport, so the
+     idle canvas reads as a present, live half of the screen — never as empty desktop.
+     The ring is covered by the iframe once real content is shown. */
+  body { background: radial-gradient(120% 120% at 30% 0%, var(--bg1), var(--bg0));
+         box-shadow: inset 0 0 0 2px rgba(255, 138, 91, .5); overflow: hidden; }
   iframe { border: 0; width: 100%; height: 100%; display: block; }
-  #wait { color: #8a8a8a; font: 14px ui-sans-serif, system-ui; padding: 2rem; }
-  code { color: #cfcfcf; }
+  #wait { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+          font-family: ui-sans-serif, system-ui, sans-serif; color: #e7ecf3; padding: 6vmin; }
+  .card { text-align: center; max-width: 30rem; }
+  .mark { font-size: clamp(28px, 6vmin, 54px); font-weight: 700; letter-spacing: .01em; }
+  .mark b { color: var(--accent); }
+  .status { margin: 1.1rem 0 .3rem; display: inline-flex; align-items: center; gap: .5rem;
+            color: #cfe9d4; font-size: clamp(13px, 2.4vmin, 16px); }
+  .dot { width: .6rem; height: .6rem; border-radius: 50%; background: #3ddc84;
+         animation: pulse 1.8s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(61, 220, 132, .55); }
+                     70% { box-shadow: 0 0 0 .7rem rgba(61, 220, 132, 0); }
+                     100% { box-shadow: 0 0 0 0 rgba(61, 220, 132, 0); } }
+  .hint { color: var(--muted); font-size: clamp(12px, 2.2vmin, 15px); line-height: 1.7; margin-top: .5rem; }
+  code { color: #ffd9c7; background: rgba(255, 138, 91, .12); padding: .1em .45em; border-radius: .35em; }
+  .orient { margin-top: 1.7rem; color: #6b7686; font-size: clamp(11px, 2vmin, 13px); }
 </style>
 </head>
 <body>
-<div id="wait">myx canvas — waiting for <code>myx show &lt;file|url&gt;</code> …</div>
+<div id="wait">
+  <div class="card">
+    <div class="mark">myx · <b>canvas</b></div>
+    <div class="status"><span class="dot"></span> ready — 待機中</div>
+    <div class="hint">claude が <code>myx show &lt;file|url&gt;</code> で<br />ここ（画面の右半分）に表示します</div>
+    <div class="orient">◀ 左：作業（claude＋メーター）　／　右：このキャンバス ▶</div>
+  </div>
+</div>
 <iframe id="f" style="display:none"></iframe>
 <script>
   let cur = null;
@@ -172,10 +200,10 @@ export function wrapperHtml(): string {
           f.style.display = "block";
           f.src = s.src;
         } else {
-          // idle (e.g. fresh \`myx canvas\`): clear any prior content, show the hint
+          // idle (e.g. fresh \`myx canvas\`): clear any prior content, show the ready panel
           f.style.display = "none";
           f.removeAttribute("src");
-          wait.style.display = "block";
+          wait.style.display = "flex";
         }
       }
     } catch (e) {}
