@@ -132,9 +132,11 @@ export function ghosttyTileScript(rect: Rect, appName = "Ghostty"): string {
     `        end try`,
     `        set position of front window to {${x}, ${y}}`,
     `        set size of front window to {${w}, ${h}}`,
+    `        return item 1 of (get size of front window)`, // resulting width, so the caller can verify the tile took
     `      end if`,
     `    end tell`,
     `  end if`,
+    `  return 0`,
     `end tell`,
   ].join("\n");
 }
@@ -333,10 +335,29 @@ function ensureServer(): void {
   sleepMs(150); // give a fresh server a moment to bind; harmless if already up
 }
 
-/** Drop Ghostty out of native fullscreen and tile it to the left half. */
+/**
+ * Drop Ghostty out of native fullscreen and tile it to the left half. Throws if the
+ * tile didn't actually stick: osascript can *report* success while macOS silently
+ * ignores the resize (window tiling / Stage Manager locking the frame, or control not
+ * granted), leaving Ghostty full-width with the canvas hidden behind it. We read back
+ * the resulting width and treat "still near full-width" as a failure so the caller can
+ * surface a hint instead of leaving the user with an unexplained full-screen Ghostty.
+ */
 function arrangeGhostty(cfg: MyxConfig): void {
   const { left } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
-  osa(ghosttyTileScript(left));
+  const gotW = Number(osa(ghosttyTileScript(left)));
+  if (Number.isFinite(gotW) && gotW > left.w + 80) throw new Error("ghostty-tile-ignored");
+}
+
+/** Actionable hint when window tiling fails (control not granted, or a macOS frame lock). */
+function windowControlHint(cfg: MyxConfig): string {
+  return (
+    "myx: couldn't tile the windows. Either grant your terminal\n" +
+    "  Automation + Accessibility (System Settings ▸ Privacy & Security), or — if\n" +
+    "  Ghostty stays full-width — macOS window tiling / Stage Manager is locking its\n" +
+    "  frame: drag Ghostty to the left half once by hand (or turn off auto-tiling).\n" +
+    `  The canvas is at ${canvasUrl(cfg)} and live-reloads on its own.`
+  );
 }
 
 /** Ensure the canvas window exists and is tiled to the right half. */
@@ -378,11 +399,7 @@ export function show(input: string): void {
     if (cfg.canvas.tileSelf) arrangeGhostty(cfg);
     ensureCanvasWindow(cfg);
   } catch {
-    console.error(
-      "myx show: couldn't control the windows. Grant your terminal\n" +
-        "  Automation + Accessibility access (System Settings ▸ Privacy & Security),\n" +
-        `  or open ${canvasUrl(cfg)} once manually. The page live-reloads on its own.`,
-    );
+    console.error(windowControlHint(cfg));
   }
   console.log(`myx: canvas → ${kind === "url" ? target : path.basename(target)}`);
 }
@@ -395,11 +412,12 @@ export function show(input: string): void {
  */
 export function canvasLaunchArrange(cfg: MyxConfig): void {
   if (process.platform !== "darwin") return; // best-effort, macOS only
+  let ok = true;
   if (cfg.canvas.tileSelf) {
     try {
       arrangeGhostty(cfg);
     } catch {
-      /* window control not granted yet — non-fatal, user can tile manually */
+      ok = false; // control not granted, or macOS ignored the resize — hint below
     }
   }
   const prev = readState();
@@ -408,6 +426,9 @@ export function canvasLaunchArrange(cfg: MyxConfig): void {
   try {
     ensureCanvasWindow(cfg);
   } catch {
-    /* non-fatal: the window can be opened later by `myx show` */
+    ok = false; // the window can still be opened later by `myx show`
   }
+  // Don't leave a silent failure: if tiling didn't take, the user is staring at a
+  // full-width Ghostty with no visible canvas and no idea why. Tell them.
+  if (!ok) console.error(windowControlHint(cfg));
 }
