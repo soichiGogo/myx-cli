@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { configPath, loadConfig, usageCachePath } from "./config.ts";
 import { readUsage } from "./usage.ts";
+import { chromeBin } from "./canvas.ts";
 
 function line(ok: boolean, label: string, note = ""): void {
   console.log(`${ok ? "✓" : "✗"} ${label}${note ? ` — ${note}` : ""}`);
@@ -78,4 +79,19 @@ export function doctor(): void {
   );
   if (cfg.statuslinePassthrough)
     line(true, "statusLine passthrough", "your previous statusline is chained");
+
+  // Canvas layout (`launch --canvas` / `myx show`) drives a Chrome app window — macOS only.
+  if (process.platform === "darwin") {
+    const chrome = chromeBin(cfg);
+    const chromeOk = fs.existsSync(chrome);
+    line(
+      chromeOk,
+      "canvas browser (Chrome)",
+      chromeOk
+        ? "`myx launch --canvas` + `myx show` ready (grant Automation/Accessibility on first use)"
+        : "Chrome not found — install it or set canvas.chromePath",
+    );
+  } else {
+    line(false, "canvas (--canvas)", "macOS only — needs GUI window control");
+  }
 }

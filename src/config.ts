@@ -1,6 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 export interface MyxConfig {
   /**
@@ -10,13 +11,39 @@ export interface MyxConfig {
   pane: { heightPct: number; heightLines?: number };
   /** tmux session name used by `myx launch`. */
   session: string;
+  /**
+   * The `--canvas` layout (B): a real GUI window tiled to the right half that
+   * `myx show` drives. macOS only.
+   */
+  canvas: {
+    /** left-hand fraction of the screen given to Ghostty (the rest is the canvas) */
+    split: number;
+    /**
+     * Number of work columns in the left (tmux) half. The myx widget always sits at
+     * the bottom of the leftmost column; the remaining columns are full-height work.
+     * 1 = a single work column (work above / widget below).
+     */
+    cols: number;
+    /** port for the localhost canvas server */
+    port: number;
+    /** top margin (px) left for the menu bar when tiling */
+    menuBarPx: number;
+    /** also tile Ghostty itself to the left half on `launch --canvas` */
+    tileSelf: boolean;
+    /** override the Chrome binary used for the canvas window */
+    chromePath?: string;
+  };
   /** Existing statusLine command to chain after caching rate limits. */
   statuslinePassthrough?: string;
 }
 
 const DEFAULTS: MyxConfig = {
-  pane: { heightPct: 24 },
+  // The widget is fixed-height content (two bars), so default to an absolute row
+  // count — a percentage of the column leaves a tall, mostly-empty pane on big
+  // screens. heightPct stays available for anyone who explicitly wants a ratio.
+  pane: { heightPct: 24, heightLines: 2 },
   session: "myx",
+  canvas: { split: 0.5, cols: 2, port: 7842, menuBarPx: 25, tileSelf: true },
 };
 
 export function configPath(): string {
@@ -28,12 +55,30 @@ export function usageCachePath(): string {
   return path.join(os.homedir(), ".cache", "myx", "usage.json");
 }
 
+/** Absolute path to the `myx` executable, used to spawn `myx widget` / `myx canvas-serve`. */
+export function myxBin(): string {
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "myx");
+}
+
 /** Load config from ~/.config/myx/config.json, falling back to defaults. */
 export function loadConfig(): MyxConfig {
   try {
     const raw = fs.readFileSync(configPath(), "utf8");
     const j = JSON.parse(raw) as Partial<MyxConfig>;
-    return { ...DEFAULTS, ...j, pane: { ...DEFAULTS.pane, ...(j.pane ?? {}) } };
+    return {
+      ...DEFAULTS,
+      ...j,
+      // When the user supplies their own pane config, respect it as given (only
+      // backfilling heightPct) — don't inject the default heightLines, so an
+      // explicit heightPct isn't silently overridden by the absolute default.
+      pane: j.pane
+        ? {
+            heightPct: j.pane.heightPct ?? DEFAULTS.pane.heightPct,
+            heightLines: j.pane.heightLines,
+          }
+        : { ...DEFAULTS.pane },
+      canvas: { ...DEFAULTS.canvas, ...(j.canvas ?? {}) },
+    };
   } catch {
     return DEFAULTS;
   }
