@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { configPath, loadConfig, usageCachePath } from "./config.ts";
 import { readUsage } from "./usage.ts";
+import { chromeBin } from "./canvas.ts";
 
 function line(ok: boolean, label: string, note = ""): void {
   console.log(`${ok ? "✓" : "✗"} ${label}${note ? ` — ${note}` : ""}`);
@@ -81,8 +82,7 @@ export function doctor(): void {
 
   // Canvas layout (`launch --canvas` / `myx show`) drives a Chrome app window — macOS only.
   if (process.platform === "darwin") {
-    const chrome =
-      cfg.canvas.chromePath ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+    const chrome = chromeBin(cfg);
     const chromeOk = fs.existsSync(chrome);
     line(
       chromeOk,

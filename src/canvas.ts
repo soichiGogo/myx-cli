@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadConfig, type MyxConfig } from "./config.ts";
+import { loadConfig, myxBin, type MyxConfig } from "./config.ts";
 
 /**
  * The "canvas" is the right-hand side of the B-layout: a real GUI window
@@ -43,13 +43,11 @@ function canvasDir(): string {
 function statePath(): string {
   return path.join(canvasDir(), "state.json");
 }
-function myxBin(): string {
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "myx");
-}
 function canvasUrl(cfg: MyxConfig): string {
   return `http://127.0.0.1:${cfg.canvas.port}/`;
 }
-function chromeBin(cfg: MyxConfig): string {
+/** The Chrome binary used for the canvas `--app` window (override via `canvas.chromePath`). */
+export function chromeBin(cfg: MyxConfig): string {
   return cfg.canvas.chromePath ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 }
 

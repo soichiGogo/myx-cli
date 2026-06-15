@@ -1,7 +1,5 @@
 import { execFileSync } from "node:child_process";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { loadConfig, type MyxConfig } from "./config.ts";
+import { loadConfig, myxBin, type MyxConfig } from "./config.ts";
 import { canvasLaunchArrange } from "./canvas.ts";
 
 /**
@@ -35,9 +33,6 @@ const TMUX = (args: string[], inherit = false): void => {
 };
 const TMUX_OUT = (args: string[]): string =>
   execFileSync("tmux", args, { encoding: "utf8" }).trim();
-function myxBin(): string {
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "myx");
-}
 
 function sessionExists(name: string): boolean {
   try {

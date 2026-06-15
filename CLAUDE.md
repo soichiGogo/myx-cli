@@ -47,7 +47,7 @@ countdowns and a projection). New items should slot in alongside it, not replace
 | `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show`, GUI window tiling (macOS)                                              |
 | `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                        |
 | `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                          |
-| `src/config.ts`     | load `~/.config/myx/config.json` + defaults                                                                                        |
+| `src/config.ts`     | load `~/.config/myx/config.json` + defaults; resolve app paths (config / cache / `myx` bin)                                        |
 | `src/doctor.ts`     | environment checks                                                                                                                 |
 | `src/types.ts`      | `UsageSnapshot`                                                                                                                    |
 | `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers)                                    |

@@ -1,6 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 export interface MyxConfig {
   /**
@@ -52,6 +53,11 @@ export function configPath(): string {
 /** Where `myx statusline` caches the official rate-limit snapshot. */
 export function usageCachePath(): string {
   return path.join(os.homedir(), ".cache", "myx", "usage.json");
+}
+
+/** Absolute path to the `myx` executable, used to spawn `myx widget` / `myx canvas-serve`. */
+export function myxBin(): string {
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "myx");
 }
 
 /** Load config from ~/.config/myx/config.json, falling back to defaults. */
