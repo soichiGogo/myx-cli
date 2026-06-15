@@ -1,4 +1,5 @@
 {
-  "pane": { "heightPct": 24 },
-  "session": "myx"
+  "pane": { "heightLines": 2 },
+  "session": "myx",
+  "canvas": { "split": 0.5, "cols": 2, "port": 7842, "menuBarPx": 25, "tileSelf": true }
 }
