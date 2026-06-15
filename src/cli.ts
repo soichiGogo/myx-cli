@@ -24,7 +24,7 @@ commands:
 options:
   --once              widget: render a single frame and exit
   --no-attach         launch: create the tmux session without attaching
-  --canvas            launch: single left column + a GUI canvas on the right half (macOS)
+  --canvas            launch: left half = work columns + widget; GUI canvas on the right (macOS)
 `;
 
 async function main(): Promise<void> {
