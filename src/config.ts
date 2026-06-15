@@ -59,7 +59,12 @@ export function loadConfig(): MyxConfig {
       // When the user supplies their own pane config, respect it as given (only
       // backfilling heightPct) — don't inject the default heightLines, so an
       // explicit heightPct isn't silently overridden by the absolute default.
-      pane: j.pane ? { heightPct: DEFAULTS.pane.heightPct, ...j.pane } : { ...DEFAULTS.pane },
+      pane: j.pane
+        ? {
+            heightPct: j.pane.heightPct ?? DEFAULTS.pane.heightPct,
+            heightLines: j.pane.heightLines,
+          }
+        : { ...DEFAULTS.pane },
       canvas: { ...DEFAULTS.canvas, ...(j.canvas ?? {}) },
     };
   } catch {
