@@ -37,20 +37,20 @@ countdowns and a projection). New items should slot in alongside it, not replace
 
 ## Module map
 
-| File                | Responsibility                                                                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `src/cli.ts`        | arg parsing → `widget` / `launch` / `canvas` / `show` / `statusline` / `install-statusline` / `doctor` (+ internal `canvas-serve`) |
-| `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                                        |
-| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                                |
-| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                                        |
-| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = left half is `canvas.cols` work cols + GUI canvas)                              |
-| `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show`, GUI window tiling (macOS)                                              |
-| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                        |
-| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                          |
-| `src/config.ts`     | load `~/.config/myx/config.json` + defaults; resolve app paths (config / cache / `myx` bin)                                        |
-| `src/doctor.ts`     | environment checks                                                                                                                 |
-| `src/types.ts`      | `UsageSnapshot`                                                                                                                    |
-| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers)                                    |
+| File                | Responsibility                                                                                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/cli.ts`        | arg parsing → `widget` / `launch` / `canvas` / `show` / `show-app` / `statusline` / `install-statusline` / `doctor` (+ internal `canvas-serve`) |
+| `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                                                     |
+| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                                             |
+| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                                                     |
+| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = left half is `canvas.cols` work cols + GUI canvas)                                           |
+| `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show` / `show-app`, GUI window tiling (macOS)                                              |
+| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                                     |
+| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                                       |
+| `src/config.ts`     | load `~/.config/myx/config.json` + defaults; resolve app paths (config / cache / `myx` bin)                                                     |
+| `src/doctor.ts`     | environment checks                                                                                                                              |
+| `src/types.ts`      | `UsageSnapshot`                                                                                                                                 |
+| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers)                                                 |
 
 ## Canvas layout (`--canvas`, macOS)
 
@@ -85,6 +85,14 @@ it from the left with `myx show <file|url>`.
   so when `canvas.tileSelf` (default) myx drops Ghostty out of native fullscreen
   (`AXFullScreen`) and tiles it to the left half before placing the canvas right.
   `myx show` does this too, so it works even when launched from a fullscreen Ghostty.
+- **`myx show-app <AppName>` puts a real native app at the canvas position** instead of
+  the Chrome canvas: it tiles the app to the right half and Ghostty to the left (same
+  `halves()` rects, same fullscreen-drop), no canvas server involved. It's a mode switch —
+  the app covers any Chrome canvas already on the right. Built to present an app-based
+  deliverable (e.g. Adobe Illustrator, driven via its MCP) for the user's review. The
+  tiler is `tileAppWindow` (the generic System-Events tiler, formerly `ghosttyTileScript`).
+  The _trigger_ — "bring the app up when presenting for review" — is a convention in the
+  working project's CLAUDE.md, deliberately not in myx.
 
 ## Dev commands
 

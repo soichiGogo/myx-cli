@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import {
   contentType,
-  ghosttyTileScript,
   halves,
   resolveTarget,
   resolveUnderRoot,
+  tileAppWindow,
   tileCanvasScript,
   wrapperHtml,
 } from "../src/canvas.ts";
@@ -57,15 +57,23 @@ test("tileCanvasScript: guards on Chrome running, matches by url, sets bounds, r
   assert.match(s, /return didTile/);
 });
 
-test("ghosttyTileScript: tiles a named app's front window via System Events", () => {
-  const s = ghosttyTileScript({ x: 0, y: 25, w: 500, h: 775 });
+test("tileAppWindow: tiles a named app's front window via System Events", () => {
+  const s = tileAppWindow({ x: 0, y: 25, w: 500, h: 775 });
   assert.match(s, /System Events/);
-  assert.match(s, /process "Ghostty"/);
+  assert.match(s, /process "Ghostty"/); // defaults to Ghostty
   assert.match(s, /set position of front window to \{0, 25\}/);
   assert.match(s, /set size of front window to \{500, 775\}/);
   // drops out of native fullscreen first (otherwise it owns its own Space)
   assert.match(s, /AXFullScreen.*is true/);
   assert.match(s, /set value of attribute "AXFullScreen" of front window to false/);
+});
+
+test("tileAppWindow: targets an app passed by name (e.g. Illustrator for show-app)", () => {
+  const s = tileAppWindow({ x: 720, y: 25, w: 720, h: 875 }, "Adobe Illustrator");
+  assert.match(s, /processes whose name is "Adobe Illustrator"/);
+  assert.match(s, /tell process "Adobe Illustrator"/);
+  assert.match(s, /set position of front window to \{720, 25\}/);
+  assert.match(s, /set size of front window to \{720, 875\}/);
 });
 
 test("contentType: maps known extensions and falls back to octet-stream", () => {
