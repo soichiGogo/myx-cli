@@ -2,7 +2,7 @@ import { runWidget } from "./widget.ts";
 import { launch, canvasCommand } from "./launch.ts";
 import { doctor } from "./doctor.ts";
 import { statusline, installStatusline } from "./statusline.ts";
-import { show, serveCanvas } from "./canvas.ts";
+import { show, showApp, serveCanvas } from "./canvas.ts";
 
 // Exit quietly when a downstream pipe closes (e.g. `myx doctor | head`).
 process.stdout.on("error", (err: NodeJS.ErrnoException) => {
@@ -17,6 +17,7 @@ commands:
   launch              build a fresh tmux layout and attach (kills an existing one)
   canvas              build a fresh canvas layout: work+widget + GUI canvas (macOS)
   show <file|url>     display a target on the canvas window (macOS); live-reloads
+  show-app <AppName>  bring a native app up at the canvas position, e.g. Illustrator (macOS)
   install-statusline  point Claude Code's statusLine at myx (backs up settings)
   statusline          internal: cache official rate limits from Claude Code stdin
   doctor              check environment (tmux, statusLine, config)
@@ -48,6 +49,11 @@ async function main(): Promise<void> {
       break;
     case "show":
       show(positionals[1] ?? "");
+      break;
+    case "show-app":
+      // App names with spaces survive shell-quoting as one positional; the join is a
+      // forgiving fallback for an unquoted `myx show-app Adobe Illustrator`.
+      showApp(positionals.slice(1).join(" "));
       break;
     case "canvas-serve":
       serveCanvas();

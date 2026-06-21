@@ -110,12 +110,13 @@ export function tileCanvasScript(url: string, rect: Rect): string {
 }
 
 /**
- * AppleScript: tile the frontmost window of a GUI app (e.g. Ghostty) via System
- * Events. A *native*-fullscreen window lives in its own Space and can't share the
- * screen with the canvas window, so we drop out of fullscreen (AXFullScreen) first,
- * then position/size it.
+ * AppleScript: tile the frontmost window of a GUI app — Ghostty by default, or any app
+ * by name (e.g. "Adobe Illustrator" for `myx show-app`) — via System Events. A *native*-
+ * fullscreen window lives in its own Space and can't share the screen with the other
+ * half, so we drop out of fullscreen (AXFullScreen) first, then position/size it. Returns
+ * the resulting window width so the caller can verify the resize actually took.
  */
-export function ghosttyTileScript(rect: Rect, appName = "Ghostty"): string {
+export function tileAppWindow(rect: Rect, appName = "Ghostty"): string {
   const { x, y, w, h } = rect;
   return [
     `tell application "System Events"`,
@@ -382,20 +383,25 @@ function ensureServer(): void {
  * surface a hint instead of leaving the user with an unexplained full-screen Ghostty.
  */
 function arrangeGhostty(left: Rect): void {
-  const gotW = Number(osa(ghosttyTileScript(left)));
+  const gotW = Number(osa(tileAppWindow(left)));
   // 80px slack: a readback still near full-width means macOS ignored the resize.
   if (Number.isFinite(gotW) && gotW > left.w + 80) throw new Error("ghostty-tile-ignored");
 }
 
-/** Actionable hint when window tiling fails (control not granted, or a macOS frame lock). */
-function windowControlHint(cfg: MyxConfig): string {
-  return (
+/**
+ * Actionable hint when window tiling fails (control not granted, or a macOS frame lock).
+ * The trailing canvas-URL line only applies to the Chrome canvas flows; `myx show-app`
+ * passes `canvasLine: false` since it never starts the canvas server.
+ */
+function windowControlHint(cfg: MyxConfig, opts?: { canvasLine?: boolean }): string {
+  const base =
     "myx: couldn't tile the windows. Either grant your terminal\n" +
     "  Automation + Accessibility (System Settings ▸ Privacy & Security), or — if\n" +
-    "  Ghostty stays full-width — macOS window tiling / Stage Manager is locking its\n" +
-    "  frame: drag Ghostty to the left half once by hand (or turn off auto-tiling).\n" +
-    `  The canvas is at ${canvasUrl(cfg)} and live-reloads on its own.`
-  );
+    "  the window stays full-width — macOS window tiling / Stage Manager is locking its\n" +
+    "  frame: drag it to its half once by hand (or turn off auto-tiling).";
+  return opts?.canvasLine === false
+    ? base
+    : base + `\n  The canvas is at ${canvasUrl(cfg)} and live-reloads on its own.`;
 }
 
 /** Ensure the canvas window exists and is tiled to the right half. */
@@ -441,6 +447,62 @@ export function show(input: string): void {
     console.error(windowControlHint(cfg));
   }
   console.log(`myx: canvas → ${kind === "url" ? target : path.basename(target)}`);
+}
+
+/**
+ * Bring `appName` to the front and tile its front window to the right half (the canvas
+ * position), polling briefly in case the app was just activated and its window hasn't
+ * appeared yet. As in arrangeGhostty's readback check, a width still near full-screen
+ * means macOS ignored the resize. Returns false on any failure so the caller can print
+ * the window-control hint.
+ */
+function ensureAppTiledRight(right: Rect, appName: string): boolean {
+  for (let i = 0; i < 50; i++) {
+    const gotW = Number(osa(tileAppWindow(right, appName)));
+    // 0 ⇒ no front window yet (app still launching); > right.w + 80 ⇒ the resize was ignored.
+    if (Number.isFinite(gotW) && gotW > 0 && gotW <= right.w + 80) return true;
+    sleepMs(100);
+  }
+  return false;
+}
+
+/**
+ * `myx show-app <AppName>` — bring a native GUI app (e.g. "Adobe Illustrator") up at the
+ * canvas position: tile it to the right half and Ghostty to the left, so claude can present
+ * an app-based deliverable for the user's review without the app taking the whole screen.
+ * Unlike `myx show`, no canvas server / Chrome window is involved — this is a mode switch
+ * that puts a real app where the canvas would be (covering any Chrome canvas already there).
+ * macOS only; best-effort, with a printed hint when window control isn't granted.
+ */
+export function showApp(appName: string): void {
+  if (process.platform !== "darwin") {
+    console.error("myx show-app: macOS-only (it controls a GUI window).");
+    process.exit(1);
+  }
+  if (!appName) {
+    console.error('usage: myx show-app <AppName>   (e.g. myx show-app "Adobe Illustrator")');
+    process.exit(1);
+  }
+  const cfg = loadConfig();
+  try {
+    execFileSync("open", ["-a", appName]); // launch it, or just raise it if already running
+  } catch {
+    console.error(`myx show-app: couldn't open application '${appName}'.`);
+    process.exit(1);
+  }
+  const { left, right } = halves(screenSize(), cfg.canvas.split, cfg.canvas.menuBarPx);
+  let ok = true;
+  // Tile Ghostty left (exiting native fullscreen if needed) so the two share the screen.
+  if (cfg.canvas.tileSelf) {
+    try {
+      arrangeGhostty(left);
+    } catch {
+      ok = false;
+    }
+  }
+  if (!ensureAppTiledRight(right, appName)) ok = false;
+  if (!ok) console.error(windowControlHint(cfg, { canvasLine: false }));
+  console.log(`myx: canvas → ${appName}`);
 }
 
 /**
