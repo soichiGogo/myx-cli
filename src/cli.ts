@@ -26,12 +26,30 @@ options:
   --once              widget: render a single frame and exit
   --no-attach         launch: create the tmux session without attaching
   --canvas            launch: left half = work columns + widget; GUI canvas on the right (macOS)
+  --session <name>    launch/canvas: tmux session name (default: \`session\` in config, "myx")
 `;
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const flags = new Set(argv.filter((a) => a.startsWith("-")));
-  const positionals = argv.filter((a) => !a.startsWith("-"));
+
+  // `--session` takes a value, so pull it out before the flag/positional split.
+  let session: string | undefined;
+  const rest: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i] ?? "";
+    if (a === "--session" || a.startsWith("--session=")) {
+      session = a === "--session" ? argv[++i] : a.slice("--session=".length);
+      if (!session || session.startsWith("-")) {
+        process.stderr.write(`myx: --session requires a name\n\n${USAGE}`);
+        process.exit(1);
+      }
+    } else {
+      rest.push(a);
+    }
+  }
+
+  const flags = new Set(rest.filter((a) => a.startsWith("-")));
+  const positionals = rest.filter((a) => !a.startsWith("-"));
   const cmd = positionals[0] ?? "widget";
 
   switch (cmd) {
@@ -42,10 +60,11 @@ async function main(): Promise<void> {
       launch({
         attach: !flags.has("--no-attach"),
         canvas: flags.has("--canvas"),
+        session,
       });
       break;
     case "canvas":
-      canvasCommand();
+      canvasCommand(session);
       break;
     case "show":
       show(positionals[1] ?? "");

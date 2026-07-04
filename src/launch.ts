@@ -128,8 +128,8 @@ function buildLayout(name: string, cfg: MyxConfig, canvas?: boolean): void {
  * `myx launch --canvas`); see `launch` for how the in-place vs. outside cases are
  * handled.
  */
-export function canvasCommand(): void {
-  launch({ attach: true, canvas: true });
+export function canvasCommand(session?: string): void {
+  launch({ attach: true, canvas: true, session });
 }
 
 /**
@@ -146,9 +146,9 @@ export function canvasCommand(): void {
  *    intended; the same Ghostty ends up on the fresh session.
  *  - **--no-attach** (scripted/test build): just (re)build detached, no window arrange.
  */
-export function launch(opts: { attach: boolean; canvas?: boolean }): void {
+export function launch(opts: { attach: boolean; canvas?: boolean; session?: string }): void {
   const cfg = loadConfig();
-  const session = cfg.session;
+  const session = opts.session ?? cfg.session;
   const cur = currentSession();
   const insideTarget = cur === session;
 
