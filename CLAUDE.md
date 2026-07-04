@@ -103,12 +103,12 @@ npm run typecheck   # tsc --noEmit
 npm test            # node:test unit tests (run through tsx)
 npm run format      # Prettier write (format:check to verify only)
 ./bin/myx doctor
-./bin/myx launch --no-attach   # build the tmux session without attaching (for tests)
+./bin/myx launch --no-attach --session <name>   # build a session detached (for tests)
 
 # `myx launch`/`canvas` now ALWAYS rebuild (kill the session first) — by design. But for
 # Claude's own verification, NEVER kill/rebuild the live `myx` session: Claude runs inside it.
-# To inspect a fresh layout, build it under a throwaway session name (set `session`
-# in a temp config), then kill only that one. Read-only `tmux list-panes` is safe.
+# To inspect a fresh layout, build it under a throwaway name with `--session <name>`,
+# then kill only that one. Read-only `tmux list-panes` is safe.
 
 # feed a fake statusline payload (the cache is normally written by Claude Code):
 echo '{"rate_limits":{"five_hour":{"used_percentage":68,"resets_at":0}}}' | ./bin/myx statusline

@@ -66,17 +66,22 @@ myx doctor          # tmux / statusLine / キャッシュ / 設定 を確認
 ## 使い方
 
 ```bash
-myx launch          # 毎回フレッシュにレイアウトを生成して接続（既存セッションは消す）
-myx launch --canvas # 左半分（作業2列＋widget）＋右半分に GUI キャンバス（macOS、下記）
-myx canvas          # = launch --canvas（キャンバスレイアウトを作り直して接続）
-myx widget          # ウィジェット単体（ペイン内で動いているもの）
-myx doctor          # 環境チェック
+myx launch                # 毎回フレッシュにレイアウトを生成して接続（既存セッションは消す）
+myx launch --session sub  # 別名の tmux セッションを建てる（並行プロジェクト・別タブ用）
+myx launch --canvas       # 左半分（作業2列＋widget）＋右半分に GUI キャンバス（macOS、下記）
+myx canvas                # = launch --canvas（キャンバスレイアウトを作り直して接続）
+myx widget                # ウィジェット単体（ペイン内で動いているもの）
+myx doctor                # 環境チェック
 ```
 
 `myx launch` / `myx canvas` は実行のたびに**既存セッションを消して作り直します**。セッションの
 **中**から実行した場合は、旧セッションを脇に退避 → 新セッションを構築 → この Ghostty を新セッションへ
 切替 → 旧セッション（動いていた claude を含む）を kill、の順で**確実に作り直します**（同じ Ghostty に
 作りたてのセッションが出ます）。放置中の detach セッションも再実行で消える点に注意してください。
+
+`--session <名前>` を使うと、既定とは**別名の tmux セッション**を同じレイアウトで建てられます
+（例: 別の Ghostty タブで別プロジェクトを開くとき）。省略時は設定の `session`（既定 `myx`）。
+作り直しで消されるのは指定した名前のセッションだけで、他のセッションには影響しません。
 
 ## 右側のキャンバス（`--canvas`、macOS）
 
@@ -139,7 +144,7 @@ typecheck・テスト・整形チェックを実行します。
 | ----------------------- | ---------------------------------------------------------------------------- |
 | `pane.heightLines`      | myx ペインの高さ（絶対行数。既定 `2`＝メーター実体に一致）。リサイズでも維持 |
 | `pane.heightPct`        | 割合指定したいとき用。`pane` に `heightPct` のみ書くと割合が優先される       |
-| `session`               | `myx launch` の tmux セッション名（既定 `myx`）                              |
+| `session`               | `myx launch` の tmux セッション名（既定 `myx`。`--session` で上書き）        |
 | `canvas.split`          | `--canvas` で Ghostty に割く画面左側の割合（既定 `0.5`）                     |
 | `canvas.cols`           | `--canvas` の左半分の作業カラム数（既定 `2`）。widget は左端カラムの下       |
 | `canvas.port`           | キャンバス用ローカルサーバのポート（既定 `7842`）                            |
