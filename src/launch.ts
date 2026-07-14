@@ -60,7 +60,7 @@ export function nextSessionName(base: string, exists: (name: string) => boolean)
 }
 
 /** The tmux session this process is running inside, or null when not in tmux. */
-function currentSession(): string | null {
+export function currentSession(): string | null {
   if (!process.env.TMUX) return null;
   try {
     return TMUX_OUT(["display-message", "-p", "#{session_name}"]);

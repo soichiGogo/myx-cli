@@ -37,20 +37,21 @@ countdowns and a projection). New items should slot in alongside it, not replace
 
 ## Module map
 
-| File                | Responsibility                                                                                                                                  |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/cli.ts`        | arg parsing → `widget` / `launch` / `canvas` / `show` / `show-app` / `statusline` / `install-statusline` / `doctor` (+ internal `canvas-serve`) |
-| `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                                                     |
-| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                                             |
-| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                                                     |
-| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = left half is `canvas.cols` work cols + GUI canvas)                                           |
-| `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show` / `show-app`, GUI window tiling (macOS)                                              |
-| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                                     |
-| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                                       |
-| `src/config.ts`     | load `~/.config/myx/config.json` + defaults; resolve app paths (config / cache / `myx` bin)                                                     |
-| `src/doctor.ts`     | environment checks                                                                                                                              |
-| `src/types.ts`      | `UsageSnapshot`                                                                                                                                 |
-| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers)                                                 |
+| File                | Responsibility                                                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/cli.ts`        | arg parsing → `widget` / `launch` / `canvas` / `sessions` / `kill` / `show` / `show-app` / `statusline` / `install-statusline` / `doctor` (+ internal `canvas-serve`) |
+| `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                                                                           |
+| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                                                                   |
+| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                                                                           |
+| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = left half is `canvas.cols` work cols + GUI canvas); `nextSessionName` auto-numbers the session                     |
+| `src/sessions.ts`   | `myx sessions` (interactive list + pick-to-kill) and `myx kill <name>` for the myx session family (base + `base-N`)                                                   |
+| `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show` / `show-app`, GUI window tiling (macOS)                                                                    |
+| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                                                           |
+| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                                                             |
+| `src/config.ts`     | load `~/.config/myx/config.json` + defaults; resolve app paths (config / cache / `myx` bin)                                                                           |
+| `src/doctor.ts`     | environment checks                                                                                                                                                    |
+| `src/types.ts`      | `UsageSnapshot`                                                                                                                                                       |
+| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers, `nextSessionName`, session table/idle helpers)                        |
 
 ## Canvas layout (`--canvas`, macOS)
 

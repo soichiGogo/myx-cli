@@ -1,5 +1,6 @@
 import { runWidget } from "./widget.ts";
 import { launch, canvasCommand } from "./launch.ts";
+import { sessionsCommand, killCommand } from "./sessions.ts";
 import { doctor } from "./doctor.ts";
 import { statusline, installStatusline } from "./statusline.ts";
 import { show, showApp, serveCanvas } from "./canvas.ts";
@@ -16,6 +17,8 @@ commands:
   widget              render the status widget (default)
   launch              build a new tmux layout and attach (keeps existing sessions)
   canvas              build a new canvas layout: work+widget + GUI canvas (macOS)
+  sessions            list myx sessions and pick one to kill (interactive)
+  kill <name>         kill a myx session by name
   show <file|url>     display a target on the canvas window (macOS); live-reloads
   show-app <AppName>  bring a native app up at the canvas position, e.g. Illustrator (macOS)
   install-statusline  point Claude Code's statusLine at myx (backs up settings)
@@ -66,6 +69,12 @@ async function main(): Promise<void> {
       break;
     case "canvas":
       canvasCommand(session);
+      break;
+    case "sessions":
+      await sessionsCommand(session);
+      break;
+    case "kill":
+      killCommand(positionals[1] ?? "", session);
       break;
     case "show":
       show(positionals[1] ?? "");
