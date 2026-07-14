@@ -14,8 +14,8 @@ const USAGE = `usage: myx <command> [options]
 
 commands:
   widget              render the status widget (default)
-  launch              build a fresh tmux layout and attach (kills an existing one)
-  canvas              build a fresh canvas layout: work+widget + GUI canvas (macOS)
+  launch              build a new tmux layout and attach (keeps existing sessions)
+  canvas              build a new canvas layout: work+widget + GUI canvas (macOS)
   show <file|url>     display a target on the canvas window (macOS); live-reloads
   show-app <AppName>  bring a native app up at the canvas position, e.g. Illustrator (macOS)
   install-statusline  point Claude Code's statusLine at myx (backs up settings)
@@ -26,7 +26,8 @@ options:
   --once              widget: render a single frame and exit
   --no-attach         launch: create the tmux session without attaching
   --canvas            launch: left half = work columns + widget; GUI canvas on the right (macOS)
-  --session <name>    launch/canvas: tmux session name (default: \`session\` in config, "myx")
+  --session <name>    launch/canvas: preferred session name, auto-numbered if taken
+                      (default: \`session\` in config, "myx")
 `;
 
 async function main(): Promise<void> {
