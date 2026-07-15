@@ -3,8 +3,10 @@ import { loadConfig, myxBin, type MyxConfig } from "./config.ts";
 import { canvasLaunchArrange } from "./canvas.ts";
 
 /**
- * Build the tmux layout and attach. `myx launch` / `myx canvas` always rebuild a
- * fresh session (kill any existing one first) — they never reuse a stale layout.
+ * Build the tmux layout and attach. `myx launch` / `myx canvas` never kill an existing
+ * session — each run starts a *new* session, auto-numbering the name (`myx`, `myx-2`,
+ * `myx-3`, … via `nextSessionName`) so earlier sessions keep running. List and remove
+ * them with `myx sessions` / `myx kill` (see `sessions.ts`).
  *
  * Default — four equal columns of shells in the launch dir; the leftmost column
  * is split so its bottom holds the myx widget:
@@ -43,8 +45,22 @@ function sessionExists(name: string): boolean {
   }
 }
 
+/**
+ * First free name in the `base`, `base-2`, `base-3`, … series (per `exists`). `launch`
+ * never kills or reuses a session, so when the preferred name is already taken the run
+ * gets the next number instead and earlier sessions stay untouched.
+ */
+export function nextSessionName(base: string, exists: (name: string) => boolean): string {
+  if (!exists(base)) return base;
+  for (let i = 2; i < 1000; i++) {
+    const name = `${base}-${i}`;
+    if (!exists(name)) return name;
+  }
+  throw new Error(`myx: too many '${base}-*' sessions — kill some with 'myx sessions'`);
+}
+
 /** The tmux session this process is running inside, or null when not in tmux. */
-function currentSession(): string | null {
+export function currentSession(): string | null {
   if (!process.env.TMUX) return null;
   try {
     return TMUX_OUT(["display-message", "-p", "#{session_name}"]);
@@ -124,62 +140,39 @@ function buildLayout(name: string, cfg: MyxConfig, canvas?: boolean): void {
 }
 
 /**
- * `myx canvas` — the `--canvas` layout. Always a fresh rebuild (same as
- * `myx launch --canvas`); see `launch` for how the in-place vs. outside cases are
- * handled.
+ * `myx canvas` — the `--canvas` layout. Same as `myx launch --canvas`: builds a *new*
+ * session (never kills an existing one); see `launch`.
  */
 export function canvasCommand(session?: string): void {
   launch({ attach: true, canvas: true, session });
 }
 
 /**
- * Build a fresh session and attach. Any existing session of the same name is killed
- * first — `launch` never reuses a stale layout.
+ * Build a *new* session and attach — `launch` never kills or reuses an existing one.
+ * The preferred name is `--session` (or config `session`, default "myx"); if it is
+ * already taken, `nextSessionName` picks the next free `-N` so earlier sessions keep
+ * running (remove them with `myx sessions` / `myx kill`).
  *
- * Three cases for the kill:
- *  - **outside the target session** (not in tmux, or in a different session): kill
- *    the old one and build + attach (or `switch-client` when nested in another tmux).
- *  - **inside the target session**: a plain kill would also kill *this* process before
- *    it could rebuild, so rename the old session aside, build the fresh one, switch the
- *    client to it, then kill the old (last op — the now-detached pane running us dies
- *    with it). The old session (and anything running in it, e.g. claude) is gone, as
- *    intended; the same Ghostty ends up on the fresh session.
- *  - **--no-attach** (scripted/test build): just (re)build detached, no window arrange.
+ *  - **--no-attach** (scripted/test build): build the new session detached and print its
+ *    name, no window arrange.
+ *  - **attach, nested in another tmux**: `switch-client` this client to the new session.
+ *  - **attach, not in tmux**: `attach` to the new session.
+ *
+ * Run from inside an existing myx session, that session is left running; this client
+ * just switches to the freshly built one.
  */
 export function launch(opts: { attach: boolean; canvas?: boolean; session?: string }): void {
   const cfg = loadConfig();
-  const session = opts.session ?? cfg.session;
+  const session = nextSessionName(opts.session ?? cfg.session, sessionExists);
   const cur = currentSession();
-  const insideTarget = cur === session;
+
+  buildLayout(session, cfg, opts.canvas);
 
   if (!opts.attach) {
-    if (insideTarget) {
-      console.error(
-        `myx: refusing to rebuild '${session}' detached from inside it ` +
-          `(that would kill this session without anything to attach to).`,
-      );
-      process.exit(1);
-    }
-    if (sessionExists(session)) TMUX(["kill-session", "-t", session]);
-    buildLayout(session, cfg, opts.canvas);
     console.log(`tmux session '${session}' created (detached).`);
     return;
   }
 
-  if (insideTarget) {
-    const old = `${session}-old`;
-    if (sessionExists(old)) TMUX(["kill-session", "-t", old]);
-    TMUX(["rename-session", "-t", session, old]); // move the live session aside
-    buildLayout(session, cfg, opts.canvas);
-    if (opts.canvas) canvasLaunchArrange(cfg);
-    tip(opts.canvas);
-    TMUX(["switch-client", "-t", session]); // this Ghostty → the fresh session
-    TMUX(["kill-session", "-t", old]); // last: also ends the pane running us
-    return;
-  }
-
-  if (sessionExists(session)) TMUX(["kill-session", "-t", session]);
-  buildLayout(session, cfg, opts.canvas);
   if (opts.canvas) canvasLaunchArrange(cfg);
   tip(opts.canvas);
   if (cur)

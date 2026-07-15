@@ -37,20 +37,21 @@ countdowns and a projection). New items should slot in alongside it, not replace
 
 ## Module map
 
-| File                | Responsibility                                                                                                                                  |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/cli.ts`        | arg parsing → `widget` / `launch` / `canvas` / `show` / `show-app` / `statusline` / `install-statusline` / `doctor` (+ internal `canvas-serve`) |
-| `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                                                     |
-| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                                             |
-| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                                                     |
-| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = left half is `canvas.cols` work cols + GUI canvas)                                           |
-| `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show` / `show-app`, GUI window tiling (macOS)                                              |
-| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                                     |
-| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                                       |
-| `src/config.ts`     | load `~/.config/myx/config.json` + defaults; resolve app paths (config / cache / `myx` bin)                                                     |
-| `src/doctor.ts`     | environment checks                                                                                                                              |
-| `src/types.ts`      | `UsageSnapshot`                                                                                                                                 |
-| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers)                                                 |
+| File                | Responsibility                                                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/cli.ts`        | arg parsing → `widget` / `launch` / `canvas` / `sessions` / `kill` / `show` / `show-app` / `statusline` / `install-statusline` / `doctor` (+ internal `canvas-serve`) |
+| `src/widget.ts`     | widget render loop (`--once` for one frame)                                                                                                                           |
+| `src/render.ts`     | render the two aligned, colored 5h/7d usage bars, sized to the pane                                                                                                   |
+| `src/ansi.ts`       | ANSI color / dim / cursor escape helpers used by the widget                                                                                                           |
+| `src/launch.ts`     | build the tmux layout (default 4-col; `--canvas` = left half is `canvas.cols` work cols + GUI canvas); `nextSessionName` auto-numbers the session                     |
+| `src/sessions.ts`   | `myx sessions` (interactive list + pick-to-kill) and `myx kill <name>` for the myx session family (base + `base-N`)                                                   |
+| `src/canvas.ts`     | `--canvas` layout (B): localhost canvas server, `myx show` / `show-app`, GUI window tiling (macOS)                                                                    |
+| `src/statusline.ts` | `myx statusline` (cache rate limits + passthrough) and `install-statusline`                                                                                           |
+| `src/usage.ts`      | read the cached official rate limits → `UsageSnapshot` (plus `project()`)                                                                                             |
+| `src/config.ts`     | load `~/.config/myx/config.json` + defaults; resolve app paths (config / cache / `myx` bin)                                                                           |
+| `src/doctor.ts`     | environment checks                                                                                                                                                    |
+| `src/types.ts`      | `UsageSnapshot`                                                                                                                                                       |
+| `test/*.test.ts`    | unit tests for the pure logic (`project`, `dur` / `bar` / `vis`, `renderFrame`, canvas helpers, `nextSessionName`, session table/idle helpers)                        |
 
 ## Canvas layout (`--canvas`, macOS)
 
@@ -62,15 +63,16 @@ a process in a split, and a real window is the only way to get full HTML fidelit
 (and the only way an app like Illustrator could ever live there, M3). claude drives
 it from the left with `myx show <file|url>`.
 
-- **`myx launch` / `myx canvas` always rebuild a fresh session** (kill any existing one
-  first — no reuse, no `--fresh` flag). `canvasCommand` just calls `launch({canvas:true})`;
-  both share `launch` in `launch.ts`. The kill has three cases (`launch`'s doc comment):
-  **outside the target session** → kill + build + attach (or `switch-client` when nested
-  in another tmux); **inside the target session** → a plain kill would kill the rebuild
-  process too, so rename the live session aside (`<session>-old`), build the fresh one,
-  `switch-client` this Ghostty to it, then kill the old as the last op (its pane — and any
-  claude in it — dies with it, as intended); **`--no-attach`** (scripted/test) → build
-  detached only, and refuse if run from inside the target. The canvas GUI (tile Ghostty
+- **`myx launch` / `myx canvas` never kill a session — each run builds a _new_ one.**
+  The preferred name is `--session` (or config `session`, default `myx`); if it is taken,
+  `nextSessionName` auto-numbers it (`myx-2`, `myx-3`, …) so earlier sessions keep running.
+  Sessions accumulate by design — clean them up with **`myx sessions`** (interactive picker)
+  or **`myx kill <name>`** (see `sessions.ts`). `canvasCommand` just calls
+  `launch({canvas:true})`; both share `launch` in `launch.ts`. Attach has three cases
+  (`launch`'s doc comment): **`--no-attach`** (scripted/test) → build detached, print the
+  chosen name, no window arrange; **nested in another tmux** → `switch-client` to the new
+  session; **not in tmux** → `attach`. Run from inside a myx session, the current one is
+  left running and this Ghostty just switches to the fresh one. The canvas GUI (tile Ghostty
   left, empty idle canvas right via `canvasLaunchArrange`) runs on the attach paths only.
   The wrapper shows the waiting hint when state is `idle` (it clears any prior iframe).
 - **Live-reload without a watcher:** `myx canvas-serve` runs a tiny localhost server
@@ -105,10 +107,12 @@ npm run format      # Prettier write (format:check to verify only)
 ./bin/myx doctor
 ./bin/myx launch --no-attach --session <name>   # build a session detached (for tests)
 
-# `myx launch`/`canvas` now ALWAYS rebuild (kill the session first) — by design. But for
-# Claude's own verification, NEVER kill/rebuild the live `myx` session: Claude runs inside it.
-# To inspect a fresh layout, build it under a throwaway name with `--session <name>`,
-# then kill only that one. Read-only `tmux list-panes` is safe.
+# `myx launch`/`canvas` never kill a session — each run builds a NEW one (auto-numbered).
+# For Claude's own verification, build under a throwaway name with `--no-attach --session
+# <name>` so nothing attaches/switches the live `myx` session Claude runs in, then remove
+# only that one (`./bin/myx kill <name>` or `tmux kill-session -t <name>`). Never run a
+# bare `myx launch`/`canvas` from here — on the attach path it would switch this client
+# away. Read-only `tmux list-panes` / `myx sessions` is safe.
 
 # feed a fake statusline payload (the cache is normally written by Claude Code):
 echo '{"rate_limits":{"five_hour":{"used_percentage":68,"resets_at":0}}}' | ./bin/myx statusline
