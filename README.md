@@ -66,22 +66,26 @@ myx doctor          # tmux / statusLine / キャッシュ / 設定 を確認
 ## 使い方
 
 ```bash
-myx launch                # 毎回フレッシュにレイアウトを生成して接続（既存セッションは消す）
-myx launch --session sub  # 別名の tmux セッションを建てる（並行プロジェクト・別タブ用）
+myx launch                # 新しいレイアウトを生成して接続（既存セッションは残す）
+myx launch --session sub  # 希望のセッション名を指定（使用中なら自動で連番。別プロジェクト・別タブ用）
 myx launch --canvas       # 左半分（作業2列＋widget）＋右半分に GUI キャンバス（macOS、下記）
-myx canvas                # = launch --canvas（キャンバスレイアウトを作り直して接続）
+myx canvas                # = launch --canvas（キャンバスレイアウトを新規作成して接続）
+myx sessions              # myx セッション一覧から選んで kill（対話ピッカー）
+myx kill <名前>           # myx セッションを名前指定で kill（非対話）
 myx widget                # ウィジェット単体（ペイン内で動いているもの）
 myx doctor                # 環境チェック
 ```
 
-`myx launch` / `myx canvas` は実行のたびに**既存セッションを消して作り直します**。セッションの
-**中**から実行した場合は、旧セッションを脇に退避 → 新セッションを構築 → この Ghostty を新セッションへ
-切替 → 旧セッション（動いていた claude を含む）を kill、の順で**確実に作り直します**（同じ Ghostty に
-作りたてのセッションが出ます）。放置中の detach セッションも再実行で消える点に注意してください。
+`myx launch` / `myx canvas` は**既存セッションを消さず、毎回あたらしいセッションを作ります**。
+希望名（`--session`、省略時は設定の `session`＝既定 `myx`）が使用中なら `myx-2`, `myx-3`… と
+**自動で連番**になるので、以前のセッション（動いている claude を含む）はそのまま残ります。
+セッションの**中**から実行しても現在のセッションには手を触れず、この Ghostty が新しい方へ
+切り替わるだけです（元へは `tmux switch-client -t <名前>` で戻れます）。
 
-`--session <名前>` を使うと、既定とは**別名の tmux セッション**を同じレイアウトで建てられます
-（例: 別の Ghostty タブで別プロジェクトを開くとき）。省略時は設定の `session`（既定 `myx`）。
-作り直しで消されるのは指定した名前のセッションだけで、他のセッションには影響しません。
+作ったセッションは溜まっていくので、`myx sessions`（一覧から番号で選んで kill する対話ピッカー。
+作業ディレクトリ・アイドル時間・接続状態を併記し、現在のセッションには `(this)` を付す）または
+`myx kill <名前>`（非対話）で掃除します。どちらも対象は **myx 一族**（`myx` と `myx-N`）だけで、
+無関係な tmux セッションには触れません。
 
 ## 右側のキャンバス（`--canvas`、macOS）
 
@@ -101,15 +105,15 @@ myx doctor                # 環境チェック
 ```
 
 ```bash
-myx canvas                   # キャンバスレイアウトを作り直して接続（= launch --canvas）
+myx canvas                   # キャンバスレイアウトを新規作成して接続（= launch --canvas）
 myx show ./report.html       # 左の claude から右へ表示（編集すると自動リロード）
 myx show https://example.com # URL もそのまま表示
 ```
 
-`myx canvas` は `myx launch --canvas` と同じで、**毎回フレッシュにセッションを作り直して**
-（作業2列＋widget の左半分＋右半分の空キャンバス）接続します。既存セッションがあれば消してから
-構築します（中＝退避→構築→切替→旧 kill、外＝kill→構築→接続）。中身は claude が `myx show`
-で随時差し替える前提です。
+`myx canvas` は `myx launch --canvas` と同じで、**あたらしいセッションを作って**
+（作業2列＋widget の左半分＋右半分の空キャンバス）接続します（既存セッションは消さず、名前が
+使用中なら連番。掃除は `myx sessions` / `myx kill`）。中身は claude が `myx show` で随時
+差し替える前提です。
 
 > **Ghostty を native フルスクリーン（緑ボタン）にしていると、右側に別ウィンドウを並べられません。**
 > native フルスクリーンは独立した Space を占有するため、キャンバスはデスクトップ側の Space に開いてしまいます。
@@ -140,18 +144,18 @@ typecheck・テスト・整形チェックを実行します。
 
 任意。`~/.config/myx/config.json`（`config.example.json` 参照）:
 
-| キー                    | 意味                                                                         |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| `pane.heightLines`      | myx ペインの高さ（絶対行数。既定 `2`＝メーター実体に一致）。リサイズでも維持 |
-| `pane.heightPct`        | 割合指定したいとき用。`pane` に `heightPct` のみ書くと割合が優先される       |
-| `session`               | `myx launch` の tmux セッション名（既定 `myx`。`--session` で上書き）        |
-| `canvas.split`          | `--canvas` で Ghostty に割く画面左側の割合（既定 `0.5`）                     |
-| `canvas.cols`           | `--canvas` の左半分の作業カラム数（既定 `2`）。widget は左端カラムの下       |
-| `canvas.port`           | キャンバス用ローカルサーバのポート（既定 `7842`）                            |
-| `canvas.menuBarPx`      | タイル時にメニューバー分あける上端の余白 px（既定 `25`）                     |
-| `canvas.tileSelf`       | `launch --canvas` で Ghostty 自身も左半分にタイルするか（既定 `true`）       |
-| `canvas.chromePath`     | キャンバスに使う Chrome バイナリのパス上書き（任意）                         |
-| `statuslinePassthrough` | `install-statusline` が自動設定。以前の statusLine を連結するための値        |
+| キー                    | 意味                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `pane.heightLines`      | myx ペインの高さ（絶対行数。既定 `2`＝メーター実体に一致）。リサイズでも維持        |
+| `pane.heightPct`        | 割合指定したいとき用。`pane` に `heightPct` のみ書くと割合が優先される              |
+| `session`               | `myx launch` の希望セッション名（既定 `myx`。使用中なら連番。`--session` で上書き） |
+| `canvas.split`          | `--canvas` で Ghostty に割く画面左側の割合（既定 `0.5`）                            |
+| `canvas.cols`           | `--canvas` の左半分の作業カラム数（既定 `2`）。widget は左端カラムの下              |
+| `canvas.port`           | キャンバス用ローカルサーバのポート（既定 `7842`）                                   |
+| `canvas.menuBarPx`      | タイル時にメニューバー分あける上端の余白 px（既定 `25`）                            |
+| `canvas.tileSelf`       | `launch --canvas` で Ghostty 自身も左半分にタイルするか（既定 `true`）              |
+| `canvas.chromePath`     | キャンバスに使う Chrome バイナリのパス上書き（任意）                                |
+| `statuslinePassthrough` | `install-statusline` が自動設定。以前の statusLine を連結するための値               |
 
 ## メモ
 
